@@ -11,10 +11,10 @@ Day 1: 2026-09-27, initial setup. Days 2–90: 2026-09-28 through 2026-12-25, da
 3. Use `.venv`, implement the change and relevant tests. Run pipeline checks; exercise the app when its behavior changes. Record failures as failures.
 4. Write `docs/progress/YYYY-MM-DD.md`: feature, rationale, files, exact validation, limitations, learning point, next step, publication status. Do not fabricate human work hours.
 5. Commit only project files. Exclude raw private source documents, credentials, local environments, downloaded raw data, and personal information.
-6. Create a branch such as `fellowship/YYYY-MM-DD-short-feature`. Open a PR to the dedicated repository under `archverma24`. Do not push directly to the default branch for feature work. Do not merge PRs or force-push.
-7. If yesterday's PR is unmerged, prefer an independent feature based on the default branch. If dependent, create a clearly labeled stacked PR targeting the predecessor branch; record that dependency. Reconcile bases when earlier PRs merge.
+6. Create a branch such as `fellowship/YYYY-MM-DD-short-feature`. Open a PR to the dedicated repository under `archverma24`. Do not push directly to the default branch for feature work. The user authorizes creating and squash-merging project PRs without daily confirmation. Never force-push.
+7. Review the PR diff and fix actionable issues. Verify required checks and project CI pass on the latest head commit, then squash-merge into `main` using the expected head SHA. Never bypass branch protections, unresolved review requirements, failing checks or conflicts. Fix blockers where possible; otherwise report them. Verify GitHub reports the PR merged and synchronize the clean local checkout with `main`. Start the next feature from updated `main`. Same-day reruns reuse an open PR; if already merged, avoid duplicate work and use a new PR only for a necessary follow-up change.
 8. If GitHub is unavailable, retain local commits and record the publishing blocker. When access returns, publish pending work without duplicate PRs. Never substitute another repository.
-9. Attach the PR and give a brief in the project chat: feature, value, checks, PR link/blocker, learning point, next feature. Include a concise factual weekly summary every seventh project day.
+9. Attach the PR and give three short points in everyday words: Added, Checked, Merged (verified PR link or blocker). Include a concise factual weekly summary every seventh project day.
 10. On Day 90, prepare a final handoff, account for open PRs, and disable the automation. Do not extend it.
 
 ## Publication target
@@ -23,11 +23,8 @@ Repository: https://github.com/archverma24/education-outcomes-lab. Default branc
 
 ## Brief template
 
-- Added: [actual behavior]
-- Why: [practical benefit]
-- Validation: [commands and measured results]
-- PR: [verified URL or exact blocker]
-- Learning: [one short concept]
-- Next: [next useful increment]
+- Added: [what changed, in everyday words]
+- Checked: [whether it worked and tests passed]
+- Merged: [verified PR link, or a clear explanation if blocked]
 
 Daily briefs may support a user's own professional journal. Do not automatically post them to LinkedIn or submit program reports.
