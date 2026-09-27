@@ -43,7 +43,7 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 
 | Day | Date | Status | Task | Done when |
 | --- | --- | --- | --- | --- |
-| 01 | 2026-09-27 | Done | Initial pipeline, baseline and dashboard | Download metadata records dataset name, source URL, license, hash and baseline; local tests pass. Completed in PR #1. |
+| 01 | 2026-09-27 | Done | Initial pipeline, baseline and dashboard | The pipeline downloads and validates data, compares a linear model with a mean baseline, and renders the dashboard; source/license are documented and tests pass. Completed in PR #1. |
 | 02 | 2026-09-28 | Planned | Dataset provenance manifest | A versioned manifest records the source, license, course, retrieval time and file hash; generated metadata matches the downloaded file. |
 | 03 | 2026-09-29 | Planned | Integrity check against a known source hash | A changed-byte fixture fails integrity verification with a clear message; the approved file passes without silently replacing its expected hash. |
 | 04 | 2026-09-30 | Planned | Reusable dataset profile | A reusable function returns record counts, column types, missing counts and numeric summaries on both a known fixture and the real dataset. |
