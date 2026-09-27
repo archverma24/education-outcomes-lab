@@ -7,7 +7,7 @@ name = "education-outcomes-lab"
 version = "0.1.0"
 description = "Reproducible education analytics with explicit data and model quality checks"
 requires-python = ">=3.10"
-dependencies = ["pandas>=2.2,<3", "scikit-learn>=1.5,<2"]
+dependencies = ["certifi>=2024.8.30", "pandas>=2.2,<3", "scikit-learn>=1.5,<2"]
 
 [project.optional-dependencies]
 app = ["streamlit>=1.40,<2"]

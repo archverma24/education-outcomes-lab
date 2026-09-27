@@ -1,5 +1,7 @@
 """Download and validate the UCI Portuguese-course dataset."""
 from io import BytesIO
+import ssl
+import certifi
 from pathlib import Path
 from urllib.request import urlopen
 from zipfile import ZipFile
@@ -12,7 +14,7 @@ TARGET = "G3"
 
 def download_data(destination: Path) -> Path:
     """Read only the named CSV from the archive; never extract arbitrary paths."""
-    with urlopen(SOURCE_URL, timeout=30) as response:
+    with urlopen(SOURCE_URL, timeout=30, context=ssl.create_default_context(cafile=certifi.where())) as response:
         archive = ZipFile(BytesIO(response.read()))
     if "student.zip" in archive.namelist():
         archive = ZipFile(BytesIO(archive.read("student.zip")))
