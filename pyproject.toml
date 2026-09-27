@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "education-outcomes-lab"
+version = "0.1.0"
+description = "Reproducible education analytics with explicit data and model quality checks"
+requires-python = ">=3.10"
+dependencies = ["certifi>=2024.8.30", "pandas>=2.2,<3", "scikit-learn>=1.5,<2"]
+
+[project.optional-dependencies]
+app = ["streamlit>=1.40,<2"]
+
+[project.scripts]
+education-outcomes = "education_outcomes.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
