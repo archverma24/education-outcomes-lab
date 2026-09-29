@@ -21,6 +21,20 @@ FEATURES = ["G1", "G2"]
 TARGET = "G3"
 
 
+def verify_sha256(payload: bytes, expected_sha256: str, source_name: str = "file") -> str:
+    """Return the actual hash or fail without changing the expected value."""
+    expected = expected_sha256.strip().lower()
+    if len(expected) != 64 or any(character not in "0123456789abcdef" for character in expected):
+        raise ValueError("Expected SHA-256 must be exactly 64 hexadecimal characters.")
+
+    actual = sha256(payload).hexdigest()
+    if actual != expected:
+        raise ValueError(
+            f"SHA-256 mismatch for {source_name}: expected {expected}, got {actual}."
+        )
+    return actual
+
+
 def build_provenance_manifest(
     path: Path, retrieved_at_utc: datetime | None = None
 ) -> dict:
@@ -51,13 +65,15 @@ def build_provenance_manifest(
     }
 
 
-def download_data(destination: Path) -> Path:
+def download_data(destination: Path, expected_sha256: str | None = None) -> Path:
     """Read only the named CSV from the archive; never extract arbitrary paths."""
     with urlopen(SOURCE_URL, timeout=30, context=ssl.create_default_context(cafile=certifi.where())) as response:
         archive = ZipFile(BytesIO(response.read()))
     if "student.zip" in archive.namelist():
         archive = ZipFile(BytesIO(archive.read("student.zip")))
     payload = archive.read(DATA_FILE_NAME)
+    if expected_sha256 is not None:
+        verify_sha256(payload, expected_sha256, DATA_FILE_NAME)
     validate_data(pd.read_csv(BytesIO(payload), sep=";"))
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(".tmp")
