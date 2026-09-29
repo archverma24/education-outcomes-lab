@@ -11,8 +11,12 @@ from education_outcomes.data import (
     build_provenance_manifest,
     download_data,
     validate_data,
+    verify_sha256,
 )
 from education_outcomes.model import evaluate
+
+
+KNOWN_ABC_SHA256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 
 
 def sample():
@@ -36,6 +40,33 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(report["train_rows"] + report["test_rows"], 60)
         self.assertLess(report["linear_regression"]["mae"], 1e-10)
         self.assertGreater(report["mean_baseline"]["mae"], 1)
+
+    def test_known_sha256_accepts_approved_bytes_and_rejects_changes(self):
+        expected = KNOWN_ABC_SHA256
+        self.assertEqual(verify_sha256(b"abc", expected), expected)
+        with self.assertRaisesRegex(ValueError, "SHA-256 mismatch for fixture.csv"):
+            verify_sha256(b"abd", expected, source_name="fixture.csv")
+        self.assertEqual(expected, KNOWN_ABC_SHA256)
+
+    def test_sha256_rejects_malformed_expected_values(self):
+        with self.assertRaisesRegex(ValueError, "64 hexadecimal characters"):
+            verify_sha256(b"abc", "not-a-sha256")
+
+    def test_download_checksum_mismatch_preserves_existing_file(self):
+        inner = BytesIO()
+        with ZipFile(inner, "w") as z:
+            z.writestr("student-por.csv", b"unapproved bytes")
+        outer = BytesIO()
+        with ZipFile(outer, "w") as z:
+            z.writestr("student.zip", inner.getvalue())
+
+        with TemporaryDirectory() as folder:
+            target = Path(folder) / "student-por.csv"
+            target.write_bytes(b"previous approved data")
+            with patch("education_outcomes.data.urlopen", return_value=BytesIO(outer.getvalue())):
+                with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                    download_data(target, expected_sha256=KNOWN_ABC_SHA256)
+            self.assertEqual(target.read_bytes(), b"previous approved data")
 
     def test_provenance_manifest_matches_file_and_records_attribution(self):
         with TemporaryDirectory() as folder:

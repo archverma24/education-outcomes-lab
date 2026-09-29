@@ -25,10 +25,13 @@ streamlit run app.py
 
 The explicit download command retrieves the public UCI data and creates `reports/baseline.json` and `reports/provenance.json`. The versioned provenance manifest records the UCI source, CC BY 4.0 license, Portuguese course, retrieval time in UTC, and SHA-256 of the downloaded CSV. Once downloaded, analysis works offline. Raw data and generated reports are excluded from Git.
 
+For a checksum obtained from a trusted source, add `--expected-sha256 YOUR_64_CHARACTER_SHA256`. A mismatch stops analysis, and a rejected download does not replace an existing data file. The expected checksum is never silently changed.
+
 ## Implemented
 
 - Named-file download from the public UCI archive, including its nested ZIP.
 - Required-column, numeric-type, integer-grade, range, and missing-value checks.
+- Optional SHA-256 verification against an explicitly supplied trusted checksum.
 - Fixed train/test split; linear regression vs. a training-only mean baseline.
 - MAE/RMSE, model coefficients, source URL and source-file SHA-256 in the CLI report.
 - Versioned data provenance manifest with attribution, UTC retrieval time, and a hash tied to the downloaded file.
