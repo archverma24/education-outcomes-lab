@@ -8,6 +8,7 @@ from education_outcomes.data import (
     build_provenance_manifest,
     download_data,
     load_data,
+    verify_sha256,
 )
 from education_outcomes.model import evaluate
 
@@ -22,13 +23,19 @@ def main():
         default=Path("reports/provenance.json"),
         help="Where to write the versioned dataset provenance manifest",
     )
+    parser.add_argument(
+        "--expected-sha256",
+        help="Optional trusted 64-character checksum; mismatches stop analysis",
+    )
     parser.add_argument("--download", action="store_true", help="Download the public UCI data")
     args = parser.parse_args()
     try:
         retrieved_at_utc = None
         if args.download:
-            download_data(args.data)
+            download_data(args.data, expected_sha256=args.expected_sha256)
             retrieved_at_utc = datetime.now(timezone.utc)
+        elif args.expected_sha256 is not None:
+            verify_sha256(args.data.read_bytes(), args.expected_sha256, args.data.name)
 
         manifest = build_provenance_manifest(args.data, retrieved_at_utc)
         report = evaluate(load_data(args.data))
