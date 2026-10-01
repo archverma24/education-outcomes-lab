@@ -12,3 +12,21 @@ jobs:
           python-version: '3.11'
       - run: pip install -e .
       - run: python -m unittest discover -s tests -v
+      - name: Check profile on the public UCI dataset
+        if: github.event_name == 'pull_request'
+        run: |
+          education-outcomes --download
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("reports/baseline.json").read_text())
+          profile = report["data_profile"]
+          assert report["provenance"]["course"] == "Portuguese"
+          assert profile["row_count"] == 649
+          assert profile["column_count"] == len(profile["column_types"])
+          for grade in ("G1", "G2", "G3"):
+              assert profile["missing_counts"][grade] == 0
+              assert profile["numeric_summary"][grade]["count"] == profile["row_count"]
+              assert profile["numeric_summary"][grade]["mean"] is not None
+          PY
