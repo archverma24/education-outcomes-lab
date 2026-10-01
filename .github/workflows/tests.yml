@@ -19,6 +19,7 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
+          import pandas as pd
 
           report = json.loads(Path("reports/baseline.json").read_text())
           profile = report["data_profile"]
@@ -29,4 +30,11 @@ jobs:
               assert profile["missing_counts"][grade] == 0
               assert profile["numeric_summary"][grade]["count"] == profile["row_count"]
               assert profile["numeric_summary"][grade]["mean"] is not None
+          audit = profile["duplicate_audit"]
+          assert audit["rows_checked"] == profile["row_count"]
+          assert audit["rows_removed"] == 0
+          assert audit["exact_duplicate_rows"] == int(
+              pd.read_csv("data/raw/student-por.csv", sep=";")
+              .duplicated(keep="first").sum()
+          )
           PY
