@@ -11,6 +11,7 @@ from education_outcomes.data import (
     verify_sha256,
 )
 from education_outcomes.model import evaluate
+from education_outcomes.profile import profile_dataset
 
 
 def main():
@@ -38,7 +39,9 @@ def main():
             verify_sha256(args.data.read_bytes(), args.expected_sha256, args.data.name)
 
         manifest = build_provenance_manifest(args.data, retrieved_at_utc)
-        report = evaluate(load_data(args.data))
+        frame = load_data(args.data)
+        report = evaluate(frame)
+        report["data_profile"] = profile_dataset(frame)
         report["provenance"] = manifest
         report["source_url"] = SOURCE_URL
         report["sha256"] = manifest["sha256"]
