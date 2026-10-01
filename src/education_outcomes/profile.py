@@ -6,6 +6,20 @@ def _number_or_none(value):
     return None if pd.isna(value) else float(value)
 
 
+def audit_duplicate_rows(frame: pd.DataFrame) -> dict:
+    """Count repeated whole rows without changing or interpreting source records."""
+    if not frame.columns.is_unique:
+        raise ValueError("Duplicate-row audit requires unique column names.")
+
+    return {
+        "rows_checked": int(len(frame)),
+        "exact_duplicate_rows": int(frame.duplicated(keep="first").sum()),
+        "comparison": "A repeated row matches an earlier row across every source column.",
+        "interpretation": "Matching values do not prove two records are the same student.",
+        "rows_removed": 0,
+    }
+
+
 def profile_dataset(frame: pd.DataFrame) -> dict:
     """Summarize structure, missing values, and numeric columns without changing rows."""
     if not frame.columns.is_unique:
@@ -31,4 +45,5 @@ def profile_dataset(frame: pd.DataFrame) -> dict:
             column: int(count) for column, count in frame.isna().sum().items()
         },
         "numeric_summary": numeric_summary,
+        "duplicate_audit": audit_duplicate_rows(frame),
     }

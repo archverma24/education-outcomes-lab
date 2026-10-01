@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 
-from education_outcomes.profile import profile_dataset
+from education_outcomes.profile import audit_duplicate_rows, profile_dataset
 
 
 class DatasetProfileTests(unittest.TestCase):
@@ -40,11 +40,37 @@ class DatasetProfileTests(unittest.TestCase):
         self.assertIsNone(profile["numeric_summary"]["G1"]["mean"])
         self.assertIsNone(profile["numeric_summary"]["G1"]["std"])
 
+    def test_exact_duplicate_audit_keeps_rows_and_checks_every_column(self):
+        frame = pd.DataFrame(
+            {
+                "G1": [10, 10, 10, 10, 10],
+                "G2": [11, 11, 11, 12, 11],
+                "school": ["GP", "GP", "GP", "GP", "MS"],
+            }
+        )
+        original = frame.copy(deep=True)
+
+        audit = audit_duplicate_rows(frame)
+
+        self.assertEqual(audit["rows_checked"], 5)
+        self.assertEqual(audit["exact_duplicate_rows"], 2)
+        self.assertEqual(audit["rows_removed"], 0)
+        self.assertIn("every source column", audit["comparison"])
+        self.assertIn("do not prove", audit["interpretation"])
+        self.assertEqual(profile_dataset(frame)["duplicate_audit"], audit)
+        pd.testing.assert_frame_equal(frame, original)
+
+    def test_missing_values_can_be_part_of_an_exact_duplicate(self):
+        frame = pd.DataFrame({"G1": [None, None], "school": ["GP", "GP"]})
+        self.assertEqual(audit_duplicate_rows(frame)["exact_duplicate_rows"], 1)
+
     def test_duplicate_column_names_fail_clearly(self):
         frame = pd.DataFrame([[10, 11]], columns=["G1", "G1"])
 
         with self.assertRaisesRegex(ValueError, "unique column names"):
             profile_dataset(frame)
+        with self.assertRaisesRegex(ValueError, "unique column names"):
+            audit_duplicate_rows(frame)
 
 
 if __name__ == "__main__":
