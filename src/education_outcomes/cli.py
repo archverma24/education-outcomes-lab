@@ -3,11 +3,13 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import pandas as pd
 from education_outcomes.data import (
     SOURCE_URL,
     build_provenance_manifest,
     download_data,
-    load_data,
+    schema_validation_report,
+    validate_data,
     verify_sha256,
 )
 from education_outcomes.model import evaluate
@@ -25,6 +27,12 @@ def main():
         help="Where to write the versioned dataset provenance manifest",
     )
     parser.add_argument(
+        "--validation-output",
+        type=Path,
+        default=Path("reports/validation.json"),
+        help="Where to write the machine-readable schema validation report",
+    )
+    parser.add_argument(
         "--expected-sha256",
         help="Optional trusted 64-character checksum; mismatches stop analysis",
     )
@@ -39,7 +47,12 @@ def main():
             verify_sha256(args.data.read_bytes(), args.expected_sha256, args.data.name)
 
         manifest = build_provenance_manifest(args.data, retrieved_at_utc)
-        frame = load_data(args.data)
+        frame = pd.read_csv(args.data, sep=";")
+        validation = schema_validation_report(frame)
+        validation["source_sha256"] = manifest["sha256"]
+        args.validation_output.parent.mkdir(parents=True, exist_ok=True)
+        args.validation_output.write_text(json.dumps(validation, indent=2) + "\n")
+        validate_data(frame)
         report = evaluate(frame)
         report["data_profile"] = profile_dataset(frame)
         report["provenance"] = manifest

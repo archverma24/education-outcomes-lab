@@ -23,6 +23,11 @@ jobs:
 
           report = json.loads(Path("reports/baseline.json").read_text())
           profile = report["data_profile"]
+          validation = json.loads(Path("reports/validation.json").read_text())
+          assert validation["status"] == "valid"
+          assert validation["row_count"] == profile["row_count"]
+          assert validation["issues"] == []
+          assert validation["source_sha256"] == report["sha256"]
           assert report["provenance"]["course"] == "Portuguese"
           assert profile["row_count"] == 649
           assert profile["column_count"] == len(profile["column_types"])

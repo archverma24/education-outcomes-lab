@@ -23,14 +23,14 @@ python -m unittest discover -s tests -v
 streamlit run app.py
 ```
 
-The explicit download command retrieves the public UCI data and creates `reports/baseline.json` and `reports/provenance.json`. The versioned provenance manifest records the UCI source, CC BY 4.0 license, Portuguese course, retrieval time in UTC, and SHA-256 of the downloaded CSV. Once downloaded, analysis works offline. Raw data and generated reports are excluded from Git. The benchmark report also includes aggregate row counts, column types, missing-value counts, numeric summaries, and an exact duplicate-row audit. The audit compares every source column, leaves all rows intact, and does not assume matching values identify the same student.
+The explicit download command retrieves the public UCI data and creates `reports/baseline.json`, `reports/provenance.json`, and `reports/validation.json`. The versioned provenance manifest records the UCI source, CC BY 4.0 license, Portuguese course, retrieval time in UTC, and SHA-256 of the downloaded CSV. Once downloaded, analysis works offline. Raw data and generated reports are excluded from Git. The benchmark report also includes aggregate row counts, column types, missing-value counts, numeric summaries, and an exact duplicate-row audit. The audit compares every source column, leaves all rows intact, and does not assume matching values identify the same student. The validation report records schema status and coded issues; invalid grade data still exits nonzero with a readable error.
 
 For a checksum obtained from a trusted source, add `--expected-sha256 YOUR_64_CHARACTER_SHA256`. A mismatch stops analysis, and a rejected download does not replace an existing data file. The expected checksum is never silently changed.
 
 ## Implemented
 
 - Named-file download from the public UCI archive, including its nested ZIP.
-- Required-column, numeric-type, integer-grade, range, and missing-value checks.
+- Required-column, numeric-type, integer-grade, range, and missing-value checks with a machine-readable validation report.
 - Optional SHA-256 verification against an explicitly supplied trusted checksum.
 - Reusable dataset profile with counts, types, missing values, numeric summaries, and a non-destructive exact duplicate-row audit.
 - Fixed train/test split; linear regression vs. a training-only mean baseline.
