@@ -82,21 +82,55 @@ def download_data(destination: Path, expected_sha256: str | None = None) -> Path
     return destination
 
 
-def validate_data(frame: pd.DataFrame) -> None:
+def schema_validation_report(frame: pd.DataFrame) -> dict:
+    """Return a machine-readable summary of the enforced grade schema."""
     required = FEATURES + [TARGET]
-    missing = sorted(set(required) - set(frame.columns))
-    if missing:
-        raise ValueError(f"Missing required columns: {', '.join(missing)}")
-    if len(frame) < 20:
-        raise ValueError("At least 20 rows are required for a train/test split.")
+    issues = []
+
+    def add_issue(code: str, message: str, column: str | None = None) -> None:
+        issue = {"code": code, "message": message}
+        if column is not None:
+            issue["column"] = column
+        issues.append(issue)
+
+    if not frame.columns.is_unique:
+        add_issue("duplicate_columns", "Column names must be unique.")
     for column in required:
-        values = frame[column]
-        if not pd.api.types.is_numeric_dtype(values):
-            raise ValueError(f"{column} must be numeric.")
-        if values.isna().any() or not values.between(0, 20).all():
-            raise ValueError(f"{column} must contain non-missing grades from 0 to 20.")
-        if (values % 1 != 0).any():
-            raise ValueError(f"{column} must contain whole-number grades.")
+        if column not in frame.columns:
+            add_issue("missing_column", f"Missing required column: {column}.", column)
+    if len(frame) < 20:
+        add_issue("too_few_rows", "At least 20 rows are required for a train/test split.")
+
+    if frame.columns.is_unique:
+        for column in required:
+            if column not in frame.columns:
+                continue
+            values = frame[column]
+            if not pd.api.types.is_numeric_dtype(values):
+                add_issue("non_numeric_grade", f"{column} must be numeric.", column)
+                continue
+            if values.isna().any():
+                add_issue("missing_grade", f"{column} must not contain missing grades.", column)
+            present = values.dropna()
+            if not present.between(0, 20).all():
+                add_issue("grade_out_of_range", f"{column} must contain grades from 0 to 20.", column)
+            if (present % 1 != 0).any():
+                add_issue("fractional_grade", f"{column} must contain whole-number grades.", column)
+
+    return {
+        "validation_version": 1,
+        "status": "invalid" if issues else "valid",
+        "row_count": int(len(frame)),
+        "column_count": int(len(frame.columns)),
+        "required_columns": required,
+        "issues": issues,
+    }
+
+
+def validate_data(frame: pd.DataFrame) -> None:
+    report = schema_validation_report(frame)
+    if report["issues"]:
+        raise ValueError("; ".join(issue["message"] for issue in report["issues"]))
 
 
 def load_data(path: Path) -> pd.DataFrame:
