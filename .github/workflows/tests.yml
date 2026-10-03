@@ -12,7 +12,10 @@ jobs:
           python-version: '3.11'
       - run: pip install -e .
       - run: python -m unittest discover -s tests -v
-      - name: Check profile on the public UCI dataset
+      - name: Install dashboard test dependencies
+        if: github.event_name == 'pull_request'
+        run: pip install -e '.[app]'
+      - name: Check profile and dashboard on the public UCI dataset
         if: github.event_name == 'pull_request'
         run: |
           education-outcomes --download
@@ -42,4 +45,14 @@ jobs:
               pd.read_csv("data/raw/student-por.csv", sep=";")
               .duplicated(keep="first").sum()
           )
+          from streamlit.testing.v1 import AppTest
+
+          dashboard = AppTest.from_file(Path.cwd() / "app.py", default_timeout=10).run()
+          assert not dashboard.exception
+          assert "Data quality" in [heading.value for heading in dashboard.subheader]
+          metrics = {metric.label: metric.value for metric in dashboard.metric}
+          assert int(metrics["Rows checked"]) == profile["row_count"]
+          assert metrics["Schema checks"] == "Passed"
+          assert int(metrics["Exact duplicate rows"]) == audit["exact_duplicate_rows"]
+          assert len(dashboard.json) >= 1
           PY
