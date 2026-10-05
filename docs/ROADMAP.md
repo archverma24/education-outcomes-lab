@@ -55,7 +55,7 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 
 | Day | Date | Status | Task | Done when |
 | --- | --- | --- | --- | --- |
-| 08 | 2026-10-04 | Planned | Grade-distribution filters | Users can filter the grade distribution by school; displayed record counts match the selected subset without retraining models. |
+| 08 | 2026-10-04 | Done | Grade-distribution filters | Users can filter the grade distribution by school; displayed record counts match the selected subset without retraining models. Completed in PR #9. |
 | 09 | 2026-10-05 | Planned | Missingness visualization | The dashboard shows missing-value counts; a synthetic missing-value fixture renders correctly even though the real data has no missing grades. |
 | 10 | 2026-10-06 | Planned | School-level aggregate comparison with sample sizes | School-level grade summaries show sample counts and avoid ranking schools or claiming differences are causal. |
 | 11 | 2026-10-07 | Planned | Summary-statistics export | Users can download aggregate count, mean, median and spread; exported values match the displayed summary. |

@@ -51,6 +51,23 @@ else:
 with st.expander("Full data-quality report"):
     st.json({"validation": validation, "profile": profile})
 
+st.subheader("Missing values by column")
+missing_counts = data.isna().sum()
+st.metric("Missing cells", int(missing_counts.sum()))
+st.dataframe(
+    pd.DataFrame({
+        "Column": [str(column) for column in missing_counts.index],
+        "Missing records": [int(count) for count in missing_counts],
+    }),
+    hide_index=True,
+)
+nonzero_missing = missing_counts[missing_counts > 0]
+if nonzero_missing.empty:
+    st.success("No missing values in the current dataset.")
+else:
+    st.bar_chart(nonzero_missing.rename("Missing records"))
+st.caption("Counts show missing cells per column; no source rows are removed.")
+
 if validation["issues"]:
     st.error("Cannot analyze dataset: " + "; ".join(issue["message"] for issue in validation["issues"]))
     st.stop()
