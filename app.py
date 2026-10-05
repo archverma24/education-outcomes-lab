@@ -7,8 +7,16 @@ import pandas as pd
 import streamlit as st
 
 from education_outcomes.data import schema_validation_report
+from education_outcomes.exploration import grade_distribution
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
+
+
+@st.cache_data(show_spinner=False)
+def evaluate_full_dataset(frame: pd.DataFrame) -> dict:
+    """Reuse unchanged full-dataset model results across chart-filter reruns."""
+    return evaluate(frame)
+
 
 st.set_page_config(page_title="Education Outcomes Lab", page_icon="📊", layout="wide")
 st.title("Education Outcomes Lab")
@@ -48,7 +56,7 @@ if validation["issues"]:
     st.stop()
 
 try:
-    report = evaluate(data)
+    report = evaluate_full_dataset(data)
 except (OSError, ValueError) as error:
     st.error(f"Cannot analyze dataset: {error}")
     st.stop()
@@ -57,7 +65,22 @@ a.metric("Course records", report["rows"])
 b.metric("Model MAE (grade points)", f'{report["linear_regression"]["mae"]:.2f}')
 c.metric("Mean baseline MAE", f'{report["mean_baseline"]["mae"]:.2f}')
 st.subheader("Final-grade distribution")
-st.bar_chart(data["G3"].value_counts().sort_index().rename("Records"))
+school_options = sorted(data["school"].dropna().unique()) if "school" in data else []
+if school_options:
+    selected_school = st.selectbox(
+        "School for grade chart", ["All schools", *school_options], key="grade_school"
+    )
+    school = None if selected_school == "All schools" else selected_school
+else:
+    school = None
+    st.caption("School filter unavailable because this dataset has no school column.")
+distribution = grade_distribution(data, school)
+st.metric("Records in chart", distribution["row_count"])
+st.bar_chart(pd.Series(distribution["grade_counts"], name="Records").sort_index())
+st.caption(
+    f"Chart shows {distribution['row_count']} of {report['rows']} course records. "
+    "Model scores above use the full dataset and do not change with this chart filter."
+)
 st.subheader("What the model knows")
 st.write("The linear model uses first- and second-period grades to estimate the final grade on a 0–20 scale. It is a late-year benchmark, not an early-warning model.")
 st.dataframe(pd.DataFrame({"Feature": list(report["coefficients"]), "Coefficient": list(report["coefficients"].values())}), hide_index=True)

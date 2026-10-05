@@ -49,7 +49,7 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 | 04 | 2026-09-30 | Done | Reusable dataset profile | A reusable function returns record counts, column types, missing counts and numeric summaries on both a known fixture and the real dataset. Completed in PR #5. |
 | 05 | 2026-10-01 | Done | Duplicate-row audit without blind deletion | The report counts exact duplicate rows and explains that duplicate values do not prove duplicate students; source rows remain intact. Completed in PR #6. |
 | 06 | 2026-10-02 | Done | Schema validation report export | The CLI exports a machine-readable validation report; invalid input returns a nonzero status and readable errors. Completed in PR #7. |
-| 07 | 2026-10-03 | Planned | Data-quality panel and first weekly review | The dashboard displays the quality report and sample counts; the first weekly summary links completed PRs and outstanding issues. |
+| 07 | 2026-10-03 | Done | Data-quality panel and first weekly review | The dashboard displays the quality report and sample counts; the first weekly summary links completed PRs and outstanding issues. Completed in PR #8. |
 
 ### Data exploration
 

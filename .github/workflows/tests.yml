@@ -55,4 +55,13 @@ jobs:
           assert metrics["Schema checks"] == "Passed"
           assert int(metrics["Exact duplicate rows"]) == audit["exact_duplicate_rows"]
           assert len(dashboard.json) >= 1
+          assert int(metrics["Records in chart"]) == profile["row_count"]
+          full_model_mae = metrics["Model MAE (grade points)"]
+          source = pd.read_csv("data/raw/student-por.csv", sep=";")
+          dashboard.selectbox[0].set_value("GP").run()
+          assert not dashboard.exception
+          filtered = {metric.label: metric.value for metric in dashboard.metric}
+          assert int(filtered["Records in chart"]) == int((source["school"] == "GP").sum())
+          assert int(filtered["Course records"]) == profile["row_count"]
+          assert filtered["Model MAE (grade points)"] == full_model_mae
           PY
