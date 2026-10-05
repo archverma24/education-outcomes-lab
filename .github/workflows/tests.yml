@@ -64,4 +64,29 @@ jobs:
           assert int(filtered["Records in chart"]) == int((source["school"] == "GP").sum())
           assert int(filtered["Course records"]) == profile["row_count"]
           assert filtered["Model MAE (grade points)"] == full_model_mae
+          assert int(filtered["Missing cells"]) == 0
+
+          source_path = Path("data/raw/student-por.csv")
+          original_bytes = source_path.read_bytes()
+          try:
+              synthetic = source.head(20).copy()
+              synthetic.loc[synthetic.index[0], "G1"] = float("nan")
+              synthetic.to_csv(source_path, sep=";", index=False)
+              invalid_dashboard = AppTest.from_file(
+                  Path.cwd() / "app.py", default_timeout=10
+              ).run()
+              assert not invalid_dashboard.exception
+              assert "Missing values by column" in [
+                  heading.value for heading in invalid_dashboard.subheader
+              ]
+              invalid_metrics = {
+                  metric.label: metric.value for metric in invalid_dashboard.metric
+              }
+              assert int(invalid_metrics["Rows checked"]) == 20
+              assert invalid_metrics["Schema checks"] == "Failed"
+              assert int(invalid_metrics["Missing cells"]) == 1
+              assert "Model MAE (grade points)" not in invalid_metrics
+              assert any("G1" in error.value for error in invalid_dashboard.error)
+          finally:
+              source_path.write_bytes(original_bytes)
           PY
