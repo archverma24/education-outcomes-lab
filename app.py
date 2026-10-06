@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from education_outcomes.data import schema_validation_report
-from education_outcomes.exploration import grade_distribution
+from education_outcomes.exploration import grade_distribution, school_grade_summary
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
 
@@ -98,6 +98,21 @@ st.caption(
     f"Chart shows {distribution['row_count']} of {report['rows']} course records. "
     "Model scores above use the full dataset and do not change with this chart filter."
 )
+st.subheader("School-level grade summaries")
+if school_options:
+    school_summary = pd.DataFrame(school_grade_summary(data)).rename(columns={
+        "school": "School",
+        "record_count": "Course records",
+        "mean_grade": "Mean G3 (grade points)",
+        "median_grade": "Median G3 (grade points)",
+    })
+    st.dataframe(school_summary, hide_index=True)
+    st.caption(
+        "Historical Portuguese-course grades, listed by school name with sample sizes. "
+        "These summaries do not rank schools or show that a school caused a difference."
+    )
+else:
+    st.caption("School summary unavailable because this dataset has no school column.")
 st.subheader("What the model knows")
 st.write("The linear model uses first- and second-period grades to estimate the final grade on a 0–20 scale. It is a late-year benchmark, not an early-warning model.")
 st.dataframe(pd.DataFrame({"Feature": list(report["coefficients"]), "Coefficient": list(report["coefficients"].values())}), hide_index=True)
