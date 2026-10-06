@@ -3,7 +3,7 @@ import unittest
 
 import pandas as pd
 
-from education_outcomes.exploration import grade_distribution
+from education_outcomes.exploration import grade_distribution, school_grade_summary
 
 
 class GradeDistributionTests(unittest.TestCase):
@@ -35,6 +35,37 @@ class GradeDistributionTests(unittest.TestCase):
             grade_distribution(frame.assign(G3=float("nan")))
         with self.assertRaisesRegex(ValueError, "Unknown school"):
             grade_distribution(frame.drop(columns="school"), "GP")
+
+
+class SchoolGradeSummaryTests(unittest.TestCase):
+    def test_counts_and_grade_summaries_are_alphabetical_without_mutation(self):
+        frame = pd.DataFrame({
+            "school": ["MS", "GP", "GP", "MS", "GP"],
+            "G3": [14, 10, 20, 16, 12],
+        })
+        original = frame.copy(deep=True)
+
+        summary = school_grade_summary(frame)
+
+        self.assertEqual(summary, [
+            {"school": "GP", "record_count": 3, "mean_grade": 14.0, "median_grade": 12.0},
+            {"school": "MS", "record_count": 2, "mean_grade": 15.0, "median_grade": 15.0},
+        ])
+        self.assertEqual(sum(row["record_count"] for row in summary), len(frame))
+        pd.testing.assert_frame_equal(frame, original)
+
+    def test_missing_school_is_labeled_and_invalid_grades_fail(self):
+        frame = pd.DataFrame({"school": ["GP", None], "G3": [10, 12]})
+        self.assertEqual(school_grade_summary(frame), [
+            {"school": "(missing school)", "record_count": 1, "mean_grade": 12.0, "median_grade": 12.0},
+            {"school": "GP", "record_count": 1, "mean_grade": 10.0, "median_grade": 10.0},
+        ])
+        with self.assertRaisesRegex(ValueError, "requires school and G3"):
+            school_grade_summary(frame.drop(columns="school"))
+        with self.assertRaisesRegex(ValueError, "requires school and G3"):
+            school_grade_summary(frame.drop(columns="G3"))
+        with self.assertRaisesRegex(ValueError, "non-missing G3"):
+            school_grade_summary(frame.assign(G3=[10, float("nan")]))
 
 
 if __name__ == "__main__":

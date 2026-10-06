@@ -58,6 +58,18 @@ jobs:
           assert int(metrics["Records in chart"]) == profile["row_count"]
           full_model_mae = metrics["Model MAE (grade points)"]
           source = pd.read_csv("data/raw/student-por.csv", sep=";")
+          assert "School-level grade summaries" in [
+              heading.value for heading in dashboard.subheader
+          ]
+          school_table = dashboard.dataframe[1].value
+          assert list(school_table["School"]) == sorted(source["school"].unique())
+          expected = source.groupby("school")["G3"].agg(["size", "mean", "median"])
+          for _, row in school_table.iterrows():
+              school = row["School"]
+              assert int(row["Course records"]) == int(expected.loc[school, "size"])
+              assert abs(row["Mean G3 (grade points)"] - expected.loc[school, "mean"]) < 1e-12
+              assert abs(row["Median G3 (grade points)"] - expected.loc[school, "median"]) < 1e-12
+          assert int(school_table["Course records"].sum()) == profile["row_count"]
           dashboard.selectbox[0].set_value("GP").run()
           assert not dashboard.exception
           filtered = {metric.label: metric.value for metric in dashboard.metric}
