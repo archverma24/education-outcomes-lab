@@ -30,7 +30,8 @@ def school_grade_summary(frame: pd.DataFrame) -> list[dict]:
         raise ValueError("School summary requires non-missing G3 values.")
 
     grouped = frame.groupby("school", dropna=False)["G3"].agg(
-        record_count="size", mean_grade="mean", median_grade="median"
+        record_count="size", mean_grade="mean", median_grade="median",
+        minimum_grade="min", maximum_grade="max"
     )
     rows = [
         {
@@ -38,7 +39,35 @@ def school_grade_summary(frame: pd.DataFrame) -> list[dict]:
             "record_count": int(values["record_count"]),
             "mean_grade": float(values["mean_grade"]),
             "median_grade": float(values["median_grade"]),
+            "grade_range": float(values["maximum_grade"] - values["minimum_grade"]),
         }
         for school, values in grouped.iterrows()
     ]
     return sorted(rows, key=lambda row: row["school"])
+
+
+SCHOOL_SUMMARY_COLUMNS = (
+    "School",
+    "Course records",
+    "Mean G3 (grade points)",
+    "Median G3 (grade points)",
+    "Range G3 (grade points)",
+)
+
+
+def school_grade_summary_table(frame: pd.DataFrame) -> pd.DataFrame:
+    """Prepare the displayed aggregate table, with stable public column names."""
+    return pd.DataFrame(school_grade_summary(frame)).rename(columns={
+        "school": SCHOOL_SUMMARY_COLUMNS[0],
+        "record_count": SCHOOL_SUMMARY_COLUMNS[1],
+        "mean_grade": SCHOOL_SUMMARY_COLUMNS[2],
+        "median_grade": SCHOOL_SUMMARY_COLUMNS[3],
+        "grade_range": SCHOOL_SUMMARY_COLUMNS[4],
+    }).reindex(columns=SCHOOL_SUMMARY_COLUMNS)
+
+
+def school_grade_summary_csv(summary_table: pd.DataFrame) -> str:
+    """Export exactly the displayed aggregate columns, excluding the row index."""
+    if list(summary_table.columns) != list(SCHOOL_SUMMARY_COLUMNS):
+        raise ValueError("School summary export requires the displayed aggregate columns.")
+    return summary_table.to_csv(index=False)
