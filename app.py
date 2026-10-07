@@ -7,7 +7,11 @@ import pandas as pd
 import streamlit as st
 
 from education_outcomes.data import schema_validation_report
-from education_outcomes.exploration import grade_distribution, school_grade_summary
+from education_outcomes.exploration import (
+    grade_distribution,
+    school_grade_summary_csv,
+    school_grade_summary_table,
+)
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
 
@@ -100,16 +104,18 @@ st.caption(
 )
 st.subheader("School-level grade summaries")
 if school_options:
-    school_summary = pd.DataFrame(school_grade_summary(data)).rename(columns={
-        "school": "School",
-        "record_count": "Course records",
-        "mean_grade": "Mean G3 (grade points)",
-        "median_grade": "Median G3 (grade points)",
-    })
+    school_summary = school_grade_summary_table(data)
     st.dataframe(school_summary, hide_index=True)
     st.caption(
         "Historical Portuguese-course grades, listed by school name with sample sizes. "
+        "Range is the highest minus the lowest final grade in each school. "
         "These summaries do not rank schools or show that a school caused a difference."
+    )
+    st.download_button(
+        "Download school summary (CSV)",
+        data=school_grade_summary_csv(school_summary),
+        file_name="school_grade_summary.csv",
+        mime="text/csv",
     )
 else:
     st.caption("School summary unavailable because this dataset has no school column.")

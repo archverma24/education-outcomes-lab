@@ -69,7 +69,19 @@ jobs:
               assert int(row["Course records"]) == int(expected.loc[school, "size"])
               assert abs(row["Mean G3 (grade points)"] - expected.loc[school, "mean"]) < 1e-12
               assert abs(row["Median G3 (grade points)"] - expected.loc[school, "median"]) < 1e-12
+              source_grades = source.loc[source["school"] == school, "G3"]
+              assert abs(row["Range G3 (grade points)"] - (
+                  source_grades.max() - source_grades.min()
+              )) < 1e-12
           assert int(school_table["Course records"].sum()) == profile["row_count"]
+          from io import StringIO
+          from education_outcomes.exploration import school_grade_summary_csv
+
+          exported = pd.read_csv(StringIO(school_grade_summary_csv(school_table)))
+          pd.testing.assert_frame_equal(exported, school_table, check_exact=False, atol=1e-12)
+          assert "Download school summary (CSV)" in [
+              button.label for button in dashboard.download_button
+          ]
           dashboard.selectbox[0].set_value("GP").run()
           assert not dashboard.exception
           filtered = {metric.label: metric.value for metric in dashboard.metric}
