@@ -9,6 +9,7 @@ import streamlit as st
 from education_outcomes.data import schema_validation_report
 from education_outcomes.exploration import (
     grade_distribution,
+    grade_outlier_summary,
     school_grade_summary_csv,
     school_grade_summary_table,
 )
@@ -119,6 +120,22 @@ if school_options:
     )
 else:
     st.caption("School summary unavailable because this dataset has no school column.")
+st.subheader("Final-grade outlier inspection")
+outliers = grade_outlier_summary(data)
+flagged = outliers["counts"]["Below lower fence"] + outliers["counts"]["Above upper fence"]
+st.metric("Records outside IQR fences", flagged)
+st.bar_chart(pd.Series(outliers["counts"], name="Course records"))
+st.caption(
+    f"All {outliers['row_count']} Portuguese-course records are counted. "
+    "Using the 1.5×IQR rule, "
+    f"Q1 is {outliers['q1']:.1f}, Q3 is {outliers['q3']:.1f}, "
+    f"and grades strictly below {outliers['lower_fence']:.1f} or above "
+    f"{outliers['upper_fence']:.1f} are flagged."
+)
+st.caption(
+    "These are descriptive flags, not data errors or reasons to remove records. "
+    "The chart does not change model training or scores."
+)
 st.subheader("What the model knows")
 st.write("The linear model uses first- and second-period grades to estimate the final grade on a 0–20 scale. It is a late-year benchmark, not an early-warning model.")
 st.dataframe(pd.DataFrame({"Feature": list(report["coefficients"]), "Coefficient": list(report["coefficients"].values())}), hide_index=True)

@@ -71,3 +71,32 @@ def school_grade_summary_csv(summary_table: pd.DataFrame) -> str:
     if list(summary_table.columns) != list(SCHOOL_SUMMARY_COLUMNS):
         raise ValueError("School summary export requires the displayed aggregate columns.")
     return summary_table.to_csv(index=False)
+
+
+def grade_outlier_summary(frame: pd.DataFrame) -> dict:
+    """Count final grades outside descriptive 1.5×IQR fences without dropping rows."""
+    if "G3" not in frame.columns:
+        raise ValueError("Outlier inspection requires G3.")
+    grades = frame["G3"]
+    if grades.empty or grades.isna().any() or not pd.api.types.is_numeric_dtype(grades):
+        raise ValueError("Outlier inspection requires non-missing numeric G3 values.")
+
+    q1 = float(grades.quantile(0.25))
+    q3 = float(grades.quantile(0.75))
+    iqr = q3 - q1
+    lower_fence = q1 - 1.5 * iqr
+    upper_fence = q3 + 1.5 * iqr
+    below = int((grades < lower_fence).sum())
+    above = int((grades > upper_fence).sum())
+    return {
+        "row_count": int(len(grades)),
+        "q1": q1,
+        "q3": q3,
+        "lower_fence": lower_fence,
+        "upper_fence": upper_fence,
+        "counts": {
+            "Below lower fence": below,
+            "Within fences": int(len(grades) - below - above),
+            "Above upper fence": above,
+        },
+    }
