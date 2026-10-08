@@ -1,4 +1,4 @@
-"""Aggregate chart, school summary, and CSV export behavior."""
+"""Aggregate chart, school summary, outlier, and CSV export behavior."""
 from io import StringIO
 import unittest
 
@@ -6,6 +6,7 @@ import pandas as pd
 
 from education_outcomes.exploration import (
     grade_distribution,
+    grade_outlier_summary,
     school_grade_summary,
     school_grade_summary_csv,
     school_grade_summary_table,
@@ -93,6 +94,36 @@ class SchoolGradeSummaryTests(unittest.TestCase):
         self.assertNotIn("Unnamed: 0", exported.columns)
         with self.assertRaisesRegex(ValueError, "displayed aggregate columns"):
             school_grade_summary_csv(table.drop(columns="Range G3 (grade points)"))
+
+
+class GradeOutlierSummaryTests(unittest.TestCase):
+    def test_counts_low_and_high_grades_without_removing_rows(self):
+        frame = pd.DataFrame({"G3": [0, 8, 9, 10, 10, 10, 11, 12, 20]})
+        original = frame.copy(deep=True)
+
+        result = grade_outlier_summary(frame)
+
+        self.assertEqual(result["row_count"], 9)
+        self.assertEqual((result["q1"], result["q3"]), (9.0, 11.0))
+        self.assertEqual((result["lower_fence"], result["upper_fence"]), (6.0, 14.0))
+        self.assertEqual(result["counts"], {
+            "Below lower fence": 1,
+            "Within fences": 7,
+            "Above upper fence": 1,
+        })
+        self.assertEqual(sum(result["counts"].values()), len(frame))
+        pd.testing.assert_frame_equal(frame, original)
+
+    def test_requires_complete_numeric_grades(self):
+        frame = pd.DataFrame({"G3": [10, 11]})
+        with self.assertRaisesRegex(ValueError, "requires G3"):
+            grade_outlier_summary(frame.drop(columns="G3"))
+        with self.assertRaisesRegex(ValueError, "non-missing numeric G3"):
+            grade_outlier_summary(frame.iloc[:0])
+        with self.assertRaisesRegex(ValueError, "non-missing numeric G3"):
+            grade_outlier_summary(frame.assign(G3=[10, float("nan")]))
+        with self.assertRaisesRegex(ValueError, "non-missing numeric G3"):
+            grade_outlier_summary(frame.assign(G3=["ten", "eleven"]))
 
 
 if __name__ == "__main__":

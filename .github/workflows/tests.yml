@@ -82,6 +82,15 @@ jobs:
           assert "Download school summary (CSV)" in [
               button.label for button in dashboard.download_button
           ]
+          assert "Final-grade outlier inspection" in [
+              heading.value for heading in dashboard.subheader
+          ]
+          q1, q3 = source["G3"].quantile([0.25, 0.75])
+          iqr = q3 - q1
+          expected_flagged = int((source["G3"] < q1 - 1.5 * iqr).sum()) + int(
+              (source["G3"] > q3 + 1.5 * iqr).sum()
+          )
+          assert int(metrics["Records outside IQR fences"]) == expected_flagged
           dashboard.selectbox[0].set_value("GP").run()
           assert not dashboard.exception
           filtered = {metric.label: metric.value for metric in dashboard.metric}
