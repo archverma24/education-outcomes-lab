@@ -70,8 +70,15 @@ nonzero_missing = missing_counts[missing_counts > 0]
 if nonzero_missing.empty:
     st.success("No missing values in the current dataset.")
 else:
-    st.bar_chart(nonzero_missing.rename("Missing records"))
-st.caption("Counts show missing cells per column; no source rows are removed.")
+    st.bar_chart(
+        nonzero_missing.rename("Missing records"),
+        x_label="Dataset column",
+        y_label="Missing course records",
+    )
+st.caption(
+    "The table lists missing course records for every column; the chart appears only "
+    "for columns with missing values. No source rows are removed."
+)
 
 if validation["issues"]:
     st.error("Cannot analyze dataset: " + "; ".join(issue["message"] for issue in validation["issues"]))
@@ -98,9 +105,14 @@ else:
     st.caption("School filter unavailable because this dataset has no school column.")
 distribution = grade_distribution(data, school)
 st.metric("Records in chart", distribution["row_count"])
-st.bar_chart(pd.Series(distribution["grade_counts"], name="Records").sort_index())
+st.bar_chart(
+    pd.Series(distribution["grade_counts"], name="Course records").sort_index(),
+    x_label="Final grade (grade points, 0–20)",
+    y_label="Course records",
+)
 st.caption(
-    f"Chart shows {distribution['row_count']} of {report['rows']} course records. "
+    "Each bar counts course records with one final grade. "
+    f"The chart shows {distribution['row_count']} of {report['rows']} course records. "
     "Model scores above use the full dataset and do not change with this chart filter."
 )
 st.subheader("School-level grade summaries")
@@ -124,8 +136,13 @@ st.subheader("Final-grade outlier inspection")
 outliers = grade_outlier_summary(data)
 flagged = outliers["counts"]["Below lower fence"] + outliers["counts"]["Above upper fence"]
 st.metric("Records outside IQR fences", flagged)
-st.bar_chart(pd.Series(outliers["counts"], name="Course records"))
+st.bar_chart(
+    pd.Series(outliers["counts"], name="Course records"),
+    x_label="Grade category under 1.5×IQR rule",
+    y_label="Course records",
+)
 st.caption(
+    "Each bar counts grades below, within, or above the descriptive fences. "
     f"All {outliers['row_count']} Portuguese-course records are counted. "
     "Using the 1.5×IQR rule, "
     f"Q1 is {outliers['q1']:.1f}, Q3 is {outliers['q3']:.1f}, "
