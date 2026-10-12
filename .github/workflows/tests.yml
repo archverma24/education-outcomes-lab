@@ -61,7 +61,7 @@ jobs:
           assert "School-level grade summaries" in [
               heading.value for heading in dashboard.subheader
           ]
-          school_table = dashboard.dataframe[1].value
+          school_table = dashboard.dataframe[1].value.copy(deep=True)
           assert list(school_table["School"]) == sorted(source["school"].unique())
           expected = source.groupby("school")["G3"].agg(["size", "mean", "median"])
           for _, row in school_table.iterrows():
@@ -98,12 +98,17 @@ jobs:
           assert int(filtered["Course records"]) == profile["row_count"]
           assert filtered["Model MAE (grade points)"] == full_model_mae
           assert int(filtered["Missing cells"]) == 0
+          filtered_school_table = dashboard.dataframe[1].value
+          pd.testing.assert_frame_equal(filtered_school_table, school_table)
+          assert school_grade_summary_csv(filtered_school_table) == (
+              school_grade_summary_csv(school_table)
+          )
 
           source_path = Path("data/raw/student-por.csv")
           original_bytes = source_path.read_bytes()
           try:
               synthetic = source.head(20).copy()
-              synthetic.loc[synthetic.index[0], "G1"] = float("nan")
+              synthetic.loc[synthetic.index[0], ["G1", "G2"]] = float("nan")
               synthetic.to_csv(source_path, sep=";", index=False)
               invalid_dashboard = AppTest.from_file(
                   Path.cwd() / "app.py", default_timeout=10
@@ -117,9 +122,14 @@ jobs:
               }
               assert int(invalid_metrics["Rows checked"]) == 20
               assert invalid_metrics["Schema checks"] == "Failed"
-              assert int(invalid_metrics["Missing cells"]) == 1
+              assert int(invalid_metrics["Missing cells"]) == 2
+              missing_table = invalid_dashboard.dataframe[0].value.set_index("Column")
+              assert int(missing_table.loc["G1", "Missing records"]) == 1
+              assert int(missing_table.loc["G2", "Missing records"]) == 1
+              assert int(missing_table["Missing records"].sum()) == 2
               assert "Model MAE (grade points)" not in invalid_metrics
               assert any("G1" in error.value for error in invalid_dashboard.error)
+              assert any("G2" in error.value for error in invalid_dashboard.error)
           finally:
               source_path.write_bytes(original_bytes)
           PY
