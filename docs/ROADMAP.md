@@ -60,8 +60,8 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 | 10 | 2026-10-06 | Done | School-level aggregate comparison with sample sizes | School-level grade summaries show sample counts and avoid ranking schools or claiming differences are causal. Completed in PR #11. |
 | 11 | 2026-10-07 | Done | Summary-statistics export | Users can download aggregate count, mean, median and spread; exported values match the displayed summary. Completed in PR #12. |
 | 12 | 2026-10-08 | Done | Outlier inspection | A chart identifies unusually low or high grades using a stated descriptive rule; no rows are automatically removed. Completed in PR #13. |
-| 13 | 2026-10-09 | Planned | Chart captions and units | Every exploration chart has a descriptive title, labeled units and a sentence explaining what it shows. |
-| 14 | 2026-10-10 | Planned | EDA regression checks | Fixture-based checks catch wrong filter counts, missingness totals and summary exports; the weekly review records results. |
+| 13 | 2026-10-09 | Done | Chart captions and units | Every exploration chart has a descriptive title, labeled units and a sentence explaining what it shows. Completed with Day 14 work in PR #14 on October 12. |
+| 14 | 2026-10-10 | Done | EDA regression checks | Fixture-based checks catch wrong filter counts, missingness totals and summary exports; the weekly review records results. Completed with Day 13 work in PR #14 on October 12. |
 
 ### Evaluation quality
 
