@@ -33,13 +33,13 @@ For a checksum obtained from a trusted source, add `--expected-sha256 YOUR_64_CH
 - Required-column, numeric-type, integer-grade, range, and missing-value checks with a machine-readable validation report.
 - Optional SHA-256 verification against an explicitly supplied trusted checksum.
 - Reusable dataset profile with counts, types, missing values, numeric summaries, and a non-destructive exact duplicate-row audit.
-- Fixed train/test split; linear regression vs. a training-only mean baseline.
+- Reproducible, validated train/test split settings (default seed 42 and 20% holdout); linear regression vs. a training-only mean baseline.
 - MAE/RMSE, model coefficients, source URL and source-file SHA-256 in the CLI report.
 - Versioned data provenance manifest with attribution, UTC retrieval time, and a hash tied to the downloaded file.
 - Streamlit dashboard with a live data-quality panel, missing-value counts, school-filtered grade chart, school-level summaries, a descriptive outlier chart, and CSV export with sample sizes, model metrics, coefficients and report export.
 - Pipeline unit tests and a GitHub Actions workflow.
 
-The first 649-row run used 519 training and 130 test records. Holdout MAE was 0.733 grade points for linear regression and 2.395 for the mean baseline. These are exploratory results on one split, not evidence of generalization to a new population.
+The default split uses seed 42 and a 20% test fraction. Changing these settings creates a different exploratory holdout, not a fresh external validation. The first 649-row run used 519 training and 130 test records. Holdout MAE was 0.733 grade points for linear regression and 2.395 for the mean baseline. These are exploratory results on one split, not evidence of generalization to a new population.
 
 ## Data and attribution
 

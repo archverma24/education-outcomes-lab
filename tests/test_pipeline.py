@@ -41,6 +41,17 @@ class PipelineTests(unittest.TestCase):
         self.assertLess(report["linear_regression"]["mae"], 1e-10)
         self.assertGreater(report["mean_baseline"]["mae"], 1)
 
+    def test_custom_split_settings_preserve_repeatable_benchmark(self):
+        report = evaluate(sample(), seed=7, test_fraction=0.25)
+        self.assertEqual(report, evaluate(sample(), seed=7, test_fraction=0.25))
+        self.assertEqual((report["train_rows"], report["test_rows"]), (45, 15))
+        self.assertEqual(report["seed"], 7)
+        self.assertEqual(report["test_fraction"], 0.25)
+        self.assertEqual(report["features"], ["G1", "G2"])
+        repeated_labels = sample()
+        repeated_labels.index = [0] * len(repeated_labels)
+        self.assertEqual(report, evaluate(repeated_labels, seed=7, test_fraction=0.25))
+
     def test_known_sha256_accepts_approved_bytes_and_rejects_changes(self):
         expected = KNOWN_ABC_SHA256
         self.assertEqual(verify_sha256(b"abc", expected), expected)
