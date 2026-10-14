@@ -14,6 +14,7 @@ from education_outcomes.data import (
 )
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
+from education_outcomes.splitting import build_split_manifest
 
 
 def main():
@@ -31,6 +32,12 @@ def main():
         type=Path,
         default=Path("reports/validation.json"),
         help="Where to write the machine-readable schema validation report",
+    )
+    parser.add_argument(
+        "--split-output",
+        type=Path,
+        default=Path("reports/split.json"),
+        help="Where to write the source-bound train/holdout row-position manifest",
     )
     parser.add_argument(
         "--expected-sha256",
@@ -54,6 +61,11 @@ def main():
         args.validation_output.write_text(json.dumps(validation, indent=2) + "\n")
         validate_data(frame)
         report = evaluate(frame)
+        split_manifest = build_split_manifest(len(frame), manifest["sha256"])
+        if (split_manifest["train_count"], split_manifest["test_count"]) != (
+            report["train_rows"], report["test_rows"]
+        ):
+            raise ValueError("Split manifest counts disagree with benchmark report.")
         report["data_profile"] = profile_dataset(frame)
         report["provenance"] = manifest
         report["source_url"] = SOURCE_URL
@@ -61,6 +73,8 @@ def main():
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
+        args.split_output.parent.mkdir(parents=True, exist_ok=True)
+        args.split_output.write_text(json.dumps(split_manifest, indent=2) + "\n")
         args.provenance_output.parent.mkdir(parents=True, exist_ok=True)
         args.provenance_output.write_text(json.dumps(manifest, indent=2) + "\n")
     except (OSError, ValueError) as error:

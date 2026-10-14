@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from math import ceil, isfinite
 from numbers import Integral, Real
+import re
 
 from sklearn.model_selection import train_test_split
 
@@ -37,3 +38,27 @@ def split_positions(row_count: int, config: SplitConfig | None = None) -> tuple[
         random_state=int(settings.seed),
     )
     return train_positions, test_positions
+
+
+def build_split_manifest(
+    row_count: int, source_sha256: str, config: SplitConfig | None = None
+) -> dict:
+    """Describe the benchmark partition without exporting student records."""
+    if not isinstance(source_sha256, str) or re.fullmatch(
+        r"[0-9a-fA-F]{64}", source_sha256
+    ) is None:
+        raise ValueError("Source SHA-256 must contain 64 hexadecimal characters.")
+    settings = config if config is not None else SplitConfig()
+    train_positions, test_positions = split_positions(row_count, settings)
+    return {
+        "manifest_version": 1,
+        "source_sha256": source_sha256.lower(),
+        "row_count": int(row_count),
+        "row_identifier": "Zero-based CSV row position, excluding the header; not a student ID",
+        "seed": int(settings.seed),
+        "test_fraction": float(settings.test_fraction),
+        "train_count": len(train_positions),
+        "test_count": len(test_positions),
+        "train_positions": train_positions,
+        "test_positions": test_positions,
+    }

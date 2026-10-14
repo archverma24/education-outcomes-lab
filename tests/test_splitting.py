@@ -1,7 +1,7 @@
 """Reproducible train/holdout split settings and row positions."""
 import unittest
 
-from education_outcomes.splitting import SplitConfig, split_positions
+from education_outcomes.splitting import SplitConfig, build_split_manifest, split_positions
 
 
 class SplitConfigTests(unittest.TestCase):
@@ -26,6 +26,33 @@ class SplitConfigTests(unittest.TestCase):
             split_positions(1)
         with self.assertRaisesRegex(ValueError, "leaves no training rows"):
             split_positions(2, SplitConfig(test_fraction=0.99))
+
+    def test_manifest_binds_complete_disjoint_partition_to_source(self):
+        source_hash = "A" * 64
+        settings = SplitConfig(seed=7, test_fraction=0.25)
+        manifest = build_split_manifest(60, source_hash, settings)
+        train = manifest["train_positions"]
+        test = manifest["test_positions"]
+
+        self.assertEqual(manifest, build_split_manifest(60, source_hash, settings))
+        self.assertEqual((train, test), split_positions(60, settings))
+        self.assertEqual(manifest["source_sha256"], source_hash.lower())
+        self.assertEqual((manifest["train_count"], manifest["test_count"]), (45, 15))
+        self.assertEqual(len(set(train)), len(train))
+        self.assertEqual(len(set(test)), len(test))
+        self.assertFalse(set(train) & set(test))
+        self.assertEqual(set(train) | set(test), set(range(60)))
+        self.assertIn("not a student ID", manifest["row_identifier"])
+        self.assertNotIn("G3", manifest)
+
+    def test_manifest_rejects_invalid_hash_and_split(self):
+        for invalid in ("", "z" * 64, "a" * 63, None):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(
+                ValueError, "Source SHA-256"
+            ):
+                build_split_manifest(60, invalid)
+        with self.assertRaisesRegex(ValueError, "at least two rows"):
+            build_split_manifest(1, "a" * 64)
 
 
 if __name__ == "__main__":
