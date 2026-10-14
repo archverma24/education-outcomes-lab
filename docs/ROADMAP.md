@@ -67,7 +67,7 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 
 | Day | Date | Status | Task | Done when |
 | --- | --- | --- | --- | --- |
-| 15 | 2026-10-11 | Planned | Reusable split configuration | A split configuration accepts a seed and test fraction, rejects invalid fractions, and reproduces the same partition. |
+| 15 | 2026-10-11 | Done | Reusable split configuration | A split configuration accepts a seed and test fraction, rejects invalid fractions, and reproduces the same partition. Completed in PR #15 on October 13. |
 | 16 | 2026-10-12 | Planned | Train/test split manifest | A manifest records source hash and train/test row identifiers; tests verify no row appears in both partitions. |
 | 17 | 2026-10-13 | Planned | Repeated cross-validation | Cross-validation runs only on the training partition with fixed seeds; fold scores and sample counts are exported. |
 | 18 | 2026-10-14 | Planned | Uncertainty summaries | Reports show mean and spread of validation scores, labeled as fold variability rather than a confidence interval for real-world performance. |

@@ -31,6 +31,21 @@ jobs:
           assert validation["row_count"] == profile["row_count"]
           assert validation["issues"] == []
           assert validation["source_sha256"] == report["sha256"]
+          split = json.loads(Path("reports/split.json").read_text())
+          assert split["source_sha256"] == report["sha256"]
+          assert split["row_count"] == report["rows"] == 649
+          assert split["train_count"] == report["train_rows"] == 519
+          assert split["test_count"] == report["test_rows"] == 130
+          train_positions = split["train_positions"]
+          test_positions = split["test_positions"]
+          assert len(train_positions) == len(set(train_positions)) == split["train_count"]
+          assert len(test_positions) == len(set(test_positions)) == split["test_count"]
+          assert not set(train_positions) & set(test_positions)
+          assert set(train_positions) | set(test_positions) == set(range(649))
+          from education_outcomes.splitting import SplitConfig, split_positions
+          assert (train_positions, test_positions) == split_positions(
+              649, SplitConfig(seed=report["seed"], test_fraction=report["test_fraction"])
+          )
           assert report["provenance"]["course"] == "Portuguese"
           assert profile["row_count"] == 649
           assert profile["column_count"] == len(profile["column_types"])
