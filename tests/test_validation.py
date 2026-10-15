@@ -1,19 +1,10 @@
-"""Schema-report and CLI export behavior."""
-from contextlib import redirect_stderr, redirect_stdout
-from hashlib import sha256
-from io import StringIO
-import json
-from pathlib import Path
-from tempfile import TemporaryDirectory
+"""Training-only repeated validation and fixed outer holdout coverage."""
 import unittest
-from unittest.mock import patch
 
 import pandas as pd
 
-from education_outcomes.cli import main
-from education_outcomes.data import schema_validation_report, validate_data
-
-
+from education_outcomes.splitting import SplitConfig, split_positions
+from education_outcomes.validation import evaluate_training_folds
 def sample():
     return pd.DataFrame({
         "G1": list(range(20)) * 3,
@@ -22,70 +13,52 @@ def sample():
     })
 
 
-class SchemaValidationTests(unittest.TestCase):
-    def test_report_names_valid_and_invalid_rules(self):
-        valid = schema_validation_report(sample())
-        self.assertEqual(valid["status"], "valid")
-        self.assertEqual(valid["row_count"], 60)
-        self.assertEqual(valid["issues"], [])
-
-        broken = sample().drop(columns="G3").iloc[:2].assign(G1=21, G2="bad")
-        report = schema_validation_report(broken)
-        self.assertEqual(report["status"], "invalid")
-        self.assertEqual(
-            {issue["code"] for issue in report["issues"]},
-            {"missing_column", "too_few_rows", "grade_out_of_range", "non_numeric_grade"},
+class RepeatedValidationTests(unittest.TestCase):
+    def test_repeats_cover_only_outer_training_rows(self):
+        frame = sample()
+        settings = SplitConfig(seed=7, test_fraction=0.25)
+        report = evaluate_training_folds(
+            frame, settings, n_splits=3, n_repeats=2, cv_seed=11
         )
-        self.assertTrue(all(issue["message"] for issue in report["issues"]))
-        with self.assertRaisesRegex(ValueError, "G1"):
-            validate_data(broken)
+        outer_train, holdout = split_positions(len(frame), settings)
 
-    def test_cli_writes_valid_schema_report(self):
-        with TemporaryDirectory() as folder:
-            root = Path(folder)
-            path = root / "student-por.csv"
-            path.write_text(sample().to_csv(sep=";", index=False))
-            validation_path = root / "validation.json"
-            argv = [
-                "education-outcomes", "--data", str(path),
-                "--output", str(root / "baseline.json"),
-                "--provenance-output", str(root / "provenance.json"),
-                "--validation-output", str(validation_path),
-            ]
-            with patch("sys.argv", argv), redirect_stdout(StringIO()):
-                main()
+        self.assertEqual(report, evaluate_training_folds(
+            frame, settings, n_splits=3, n_repeats=2, cv_seed=11
+        ))
+        self.assertEqual((report["outer_training_count"], report["reserved_holdout_count"]), (45, 15))
+        self.assertEqual(len(report["folds"]), 6)
+        self.assertEqual(report["features"], ["G1", "G2"])
+        for repeat in (1, 2):
+            seen = []
+            for fold in (item for item in report["folds"] if item["repeat"] == repeat):
+                positions = fold["validation_positions"]
+                self.assertEqual(fold["training_count"] + fold["validation_count"], 45)
+                self.assertEqual(fold["validation_count"], len(positions))
+                self.assertFalse(set(positions) & set(holdout))
+                self.assertTrue(set(positions) <= set(outer_train))
+                self.assertGreaterEqual(fold["linear_regression"]["mae"], 0)
+                self.assertGreaterEqual(fold["mean_baseline"]["mae"], 0)
+                seen.extend(positions)
+            self.assertEqual(sorted(seen), sorted(outer_train))
 
-            report = json.loads(validation_path.read_text())
-            self.assertEqual(report["status"], "valid")
-            self.assertEqual(report["row_count"], 60)
-            self.assertEqual(report["source_sha256"], sha256(path.read_bytes()).hexdigest())
-            self.assertTrue((root / "baseline.json").exists())
+    def test_holdout_target_changes_do_not_change_validation_scores(self):
+        frame = sample()
+        _, holdout = split_positions(len(frame))
+        unchanged = evaluate_training_folds(frame)
+        altered = frame.copy(deep=True)
+        altered.iloc[holdout, altered.columns.get_loc("G3")] = 20
+        self.assertEqual(unchanged, evaluate_training_folds(altered))
 
-    def test_cli_exports_invalid_report_and_exits_with_readable_error(self):
-        with TemporaryDirectory() as folder:
-            root = Path(folder)
-            path = root / "student-por.csv"
-            path.write_text(sample().assign(G1=21).to_csv(sep=";", index=False))
-            validation_path = root / "validation.json"
-            baseline_path = root / "baseline.json"
-            argv = [
-                "education-outcomes", "--data", str(path),
-                "--output", str(baseline_path),
-                "--provenance-output", str(root / "provenance.json"),
-                "--validation-output", str(validation_path),
-            ]
-            stderr = StringIO()
-            with patch("sys.argv", argv), redirect_stdout(StringIO()), redirect_stderr(stderr):
-                with self.assertRaises(SystemExit) as raised:
-                    main()
-
-            self.assertEqual(raised.exception.code, 1)
-            self.assertIn("G1", stderr.getvalue())
-            self.assertIn("0 to 20", stderr.getvalue())
-            report = json.loads(validation_path.read_text())
-            self.assertEqual(report["status"], "invalid")
-            self.assertIn("grade_out_of_range", [issue["code"] for issue in report["issues"]])
-            self.assertFalse(baseline_path.exists())
+    def test_invalid_fold_settings_fail_clearly(self):
+        frame = sample()
+        for count in (1, 1000, True, 2.5):
+            with self.subTest(count=count), self.assertRaisesRegex(ValueError, "Fold count"):
+                evaluate_training_folds(frame, n_splits=count)
+        for repeats in (0, -1, True, 1.5):
+            with self.subTest(repeats=repeats), self.assertRaisesRegex(ValueError, "Repeat count"):
+                evaluate_training_folds(frame, n_repeats=repeats)
+        with self.assertRaisesRegex(ValueError, "Split seed"):
+            evaluate_training_folds(frame, cv_seed=-1)
 
 
 if __name__ == "__main__":

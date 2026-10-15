@@ -15,6 +15,7 @@ from education_outcomes.data import (
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
 from education_outcomes.splitting import build_split_manifest
+from education_outcomes.validation import evaluate_training_folds
 
 
 def main():
@@ -38,6 +39,12 @@ def main():
         type=Path,
         default=Path("reports/split.json"),
         help="Where to write the source-bound train/holdout row-position manifest",
+    )
+    parser.add_argument(
+        "--cross-validation-output",
+        type=Path,
+        default=Path("reports/cross_validation.json"),
+        help="Where to write repeated training-only validation scores",
     )
     parser.add_argument(
         "--expected-sha256",
@@ -66,6 +73,8 @@ def main():
             report["train_rows"], report["test_rows"]
         ):
             raise ValueError("Split manifest counts disagree with benchmark report.")
+        cross_validation = evaluate_training_folds(frame)
+        cross_validation["source_sha256"] = manifest["sha256"]
         report["data_profile"] = profile_dataset(frame)
         report["provenance"] = manifest
         report["source_url"] = SOURCE_URL
@@ -75,6 +84,8 @@ def main():
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         args.split_output.parent.mkdir(parents=True, exist_ok=True)
         args.split_output.write_text(json.dumps(split_manifest, indent=2) + "\n")
+        args.cross_validation_output.parent.mkdir(parents=True, exist_ok=True)
+        args.cross_validation_output.write_text(json.dumps(cross_validation, indent=2) + "\n")
         args.provenance_output.parent.mkdir(parents=True, exist_ok=True)
         args.provenance_output.write_text(json.dumps(manifest, indent=2) + "\n")
     except (OSError, ValueError) as error:
