@@ -46,6 +46,24 @@ jobs:
           assert (train_positions, test_positions) == split_positions(
               649, SplitConfig(seed=report["seed"], test_fraction=report["test_fraction"])
           )
+          cross_validation = json.loads(Path("reports/cross_validation.json").read_text())
+          assert cross_validation["source_sha256"] == split["source_sha256"]
+          assert cross_validation["outer_training_count"] == split["train_count"]
+          assert cross_validation["reserved_holdout_count"] == split["test_count"]
+          assert len(cross_validation["folds"]) == 15
+          import math
+          for repeat in range(1, 4):
+              seen = []
+              for fold in (item for item in cross_validation["folds"] if item["repeat"] == repeat):
+                  positions = fold["validation_positions"]
+                  assert fold["training_count"] + fold["validation_count"] == 519
+                  assert fold["validation_count"] == len(positions)
+                  assert not set(positions) & set(test_positions)
+                  for model in ("linear_regression", "mean_baseline"):
+                      assert math.isfinite(fold[model]["mae"])
+                      assert math.isfinite(fold[model]["rmse"])
+                  seen.extend(positions)
+              assert sorted(seen) == sorted(train_positions)
           assert report["provenance"]["course"] == "Portuguese"
           assert profile["row_count"] == 649
           assert profile["column_count"] == len(profile["column_types"])

@@ -46,11 +46,13 @@ class SchemaValidationTests(unittest.TestCase):
             path = root / "student-por.csv"
             path.write_text(sample().to_csv(sep=";", index=False))
             validation_path = root / "validation.json"
+            cross_validation_path = root / "cross_validation.json"
             argv = [
                 "education-outcomes", "--data", str(path),
                 "--output", str(root / "baseline.json"),
                 "--provenance-output", str(root / "provenance.json"),
                 "--validation-output", str(validation_path),
+                "--cross-validation-output", str(cross_validation_path),
             ]
             with patch("sys.argv", argv), redirect_stdout(StringIO()):
                 main()
@@ -60,6 +62,9 @@ class SchemaValidationTests(unittest.TestCase):
             self.assertEqual(report["row_count"], 60)
             self.assertEqual(report["source_sha256"], sha256(path.read_bytes()).hexdigest())
             self.assertTrue((root / "baseline.json").exists())
+            folds = json.loads(cross_validation_path.read_text())
+            self.assertEqual(folds["source_sha256"], report["source_sha256"])
+            self.assertEqual(len(folds["folds"]), 15)
 
     def test_cli_exports_invalid_report_and_exits_with_readable_error(self):
         with TemporaryDirectory() as folder:
