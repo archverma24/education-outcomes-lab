@@ -1,10 +1,13 @@
 """Training-only repeated validation and fixed outer holdout coverage."""
 import unittest
+from math import sqrt
 
 import pandas as pd
 
 from education_outcomes.splitting import SplitConfig, split_positions
-from education_outcomes.validation import evaluate_training_folds
+from education_outcomes.validation import evaluate_training_folds, summarize_fold_scores
+
+
 def sample():
     return pd.DataFrame({
         "G1": list(range(20)) * 3,
@@ -48,6 +51,25 @@ class RepeatedValidationTests(unittest.TestCase):
         altered = frame.copy(deep=True)
         altered.iloc[holdout, altered.columns.get_loc("G3")] = 20
         self.assertEqual(unchanged, evaluate_training_folds(altered))
+
+    def test_summary_reports_known_fold_spread_without_interval_claim(self):
+        folds = [
+            {"linear_regression": {"mae": 1.0, "rmse": 2.0},
+             "mean_baseline": {"mae": 2.0, "rmse": 3.0}},
+            {"linear_regression": {"mae": 3.0, "rmse": 4.0},
+             "mean_baseline": {"mae": 4.0, "rmse": 5.0}},
+        ]
+        summary = summarize_fold_scores(folds)
+        self.assertEqual(summary["fold_count"], 2)
+        self.assertEqual(summary["unit"], "grade points")
+        self.assertIn("not a confidence interval", summary["interpretation"])
+        linear_mae = summary["models"]["linear_regression"]["mae"]
+        self.assertEqual(linear_mae["mean"], 2.0)
+        self.assertAlmostEqual(linear_mae["sample_standard_deviation"], sqrt(2))
+        self.assertEqual((linear_mae["minimum"], linear_mae["maximum"]), (1.0, 3.0))
+        self.assertEqual(summary["models"]["mean_baseline"]["rmse"]["mean"], 4.0)
+        with self.assertRaisesRegex(ValueError, "At least two"):
+            summarize_fold_scores(folds[:1])
 
     def test_invalid_fold_settings_fail_clearly(self):
         frame = sample()

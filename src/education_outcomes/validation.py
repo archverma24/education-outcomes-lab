@@ -1,5 +1,6 @@
 """Repeated validation confined to the fixed outer training partition."""
 from numbers import Integral
+from statistics import fmean, stdev
 
 import pandas as pd
 from sklearn.dummy import DummyRegressor
@@ -9,6 +10,35 @@ from sklearn.model_selection import RepeatedKFold
 
 from education_outcomes.data import FEATURES, TARGET, validate_data
 from education_outcomes.splitting import SplitConfig, split_positions
+
+
+def summarize_fold_scores(folds: list[dict]) -> dict:
+    """Describe variation among fold scores without claiming an interval estimate."""
+    if len(folds) < 2:
+        raise ValueError("At least two fold scores are required for a spread summary.")
+    models = {}
+    for model in ("linear_regression", "mean_baseline"):
+        metrics = {}
+        for metric in ("mae", "rmse"):
+            values = [fold[model][metric] for fold in folds]
+            metrics[metric] = {
+                "mean": float(fmean(values)),
+                "sample_standard_deviation": float(stdev(values)),
+                "minimum": float(min(values)),
+                "maximum": float(max(values)),
+            }
+        models[model] = metrics
+    return {
+        "summary_version": 1,
+        "fold_count": len(folds),
+        "unit": "grade points",
+        "method": "Unweighted fold-score mean and sample standard deviation",
+        "interpretation": (
+            "Descriptive variability across repeated training folds; not a confidence "
+            "interval or an estimate for a new population. Repeated folds share records."
+        ),
+        "models": models,
+    }
 
 
 def evaluate_training_folds(
@@ -79,6 +109,7 @@ def evaluate_training_folds(
         "features": FEATURES.copy(),
         "target": TARGET,
         "folds": folds,
+        "score_summary": summarize_fold_scores(folds),
         "limitations": [
             "Validation uses historical training rows only; the reserved holdout is excluded.",
             "Fold scores are exploratory and do not establish performance for new populations.",
