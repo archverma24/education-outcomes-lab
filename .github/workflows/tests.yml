@@ -51,7 +51,20 @@ jobs:
           assert cross_validation["outer_training_count"] == split["train_count"]
           assert cross_validation["reserved_holdout_count"] == split["test_count"]
           assert len(cross_validation["folds"]) == 15
+          summary = cross_validation["score_summary"]
+          assert summary["fold_count"] == 15
+          assert summary["unit"] == "grade points"
+          assert "not a confidence interval" in summary["interpretation"]
           import math
+          from statistics import fmean, stdev
+          for model in ("linear_regression", "mean_baseline"):
+              for metric in ("mae", "rmse"):
+                  values = [fold[model][metric] for fold in cross_validation["folds"]]
+                  measured = summary["models"][model][metric]
+                  assert math.isclose(measured["mean"], fmean(values))
+                  assert math.isclose(measured["sample_standard_deviation"], stdev(values))
+                  assert measured["minimum"] == min(values)
+                  assert measured["maximum"] == max(values)
           for repeat in range(1, 4):
               seen = []
               for fold in (item for item in cross_validation["folds"] if item["repeat"] == repeat):
