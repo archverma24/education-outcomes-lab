@@ -3,6 +3,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -15,12 +16,19 @@ from education_outcomes.exploration import (
 )
 from education_outcomes.model import evaluate
 from education_outcomes.profile import profile_dataset
+from education_outcomes.validation import evaluate_training_folds
 
 
 @st.cache_data(show_spinner=False)
 def evaluate_full_dataset(frame: pd.DataFrame) -> dict:
     """Reuse unchanged full-dataset model results across chart-filter reruns."""
     return evaluate(frame)
+
+
+@st.cache_data(show_spinner=False)
+def evaluate_training_dataset(frame: pd.DataFrame) -> dict:
+    """Cache training-only validation and residual diagnostics across chart reruns."""
+    return evaluate_training_folds(frame)
 
 
 st.set_page_config(page_title="Education Outcomes Lab", page_icon="📊", layout="wide")
@@ -152,6 +160,29 @@ st.caption(
 st.caption(
     "These are descriptive flags, not data errors or reasons to remove records. "
     "The chart does not change model training or scores."
+)
+st.subheader("Training-only residual diagnostics")
+try:
+    training_validation = evaluate_training_dataset(data)
+except (OSError, ValueError) as error:
+    st.error(f"Cannot compute training residuals: {error}")
+    st.stop()
+diagnostics = training_validation["residual_diagnostics"]
+residual_frame = pd.DataFrame(diagnostics["points"])
+st.metric("Training residual points", diagnostics["row_count"])
+residual_points = alt.Chart(residual_frame).mark_circle(size=45, opacity=0.55).encode(
+    x=alt.X("predicted_grade:Q", title=diagnostics["x_label"]),
+    y=alt.Y("residual_grade_points:Q", title=diagnostics["y_label"]),
+)
+zero_line = alt.Chart(pd.DataFrame({"zero": [diagnostics["zero_reference"]]})).mark_rule(
+    color="#B44B41", strokeDash=[5, 4]
+).encode(y="zero:Q")
+st.altair_chart((residual_points + zero_line).properties(height=300), use_container_width=True)
+st.caption(
+    "Each point is one outer-training record predicted by a model that did not fit on "
+    "that record (first validation repeat only). Residual is actual minus predicted; "
+    "the dashed line marks zero. Reserved test rows are excluded. "
+    "This is a historical model check, not a student-level decision tool."
 )
 st.subheader("What the model knows")
 st.write("The linear model uses first- and second-period grades to estimate the final grade on a 0–20 scale. It is a late-year benchmark, not an early-warning model.")
