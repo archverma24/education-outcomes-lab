@@ -52,6 +52,36 @@ class RepeatedValidationTests(unittest.TestCase):
         altered.iloc[holdout, altered.columns.get_loc("G3")] = 20
         self.assertEqual(unchanged, evaluate_training_folds(altered))
 
+    def test_residuals_cover_each_training_row_and_ignore_holdout_targets(self):
+        frame = sample()
+        settings = SplitConfig(seed=7, test_fraction=0.25)
+        report = evaluate_training_folds(frame, settings, n_splits=3, n_repeats=2, cv_seed=11)
+        diagnostics = report["residual_diagnostics"]
+        outer_train, holdout = split_positions(len(frame), settings)
+        points = diagnostics["points"]
+
+        self.assertEqual(diagnostics["row_count"], len(outer_train))
+        self.assertEqual([point["row_position"] for point in points], sorted(outer_train))
+        self.assertFalse({point["row_position"] for point in points} & set(holdout))
+        self.assertEqual(diagnostics["zero_reference"], 0.0)
+        self.assertIn("Predicted", diagnostics["x_label"])
+        self.assertIn("Actual minus predicted", diagnostics["y_label"])
+        for point in points:
+            actual = frame.iloc[point["row_position"]]["G3"]
+            self.assertAlmostEqual(
+                point["residual_grade_points"],
+                actual - point["predicted_grade"],
+            )
+
+        altered = frame.copy(deep=True)
+        altered.iloc[holdout, altered.columns.get_loc("G3")] = 20
+        self.assertEqual(
+            diagnostics,
+            evaluate_training_folds(
+                altered, settings, n_splits=3, n_repeats=2, cv_seed=11
+            )["residual_diagnostics"],
+        )
+
     def test_summary_reports_known_fold_spread_without_interval_claim(self):
         folds = [
             {"linear_regression": {"mae": 1.0, "rmse": 2.0},

@@ -60,6 +60,7 @@ def evaluate_training_folds(
     SplitConfig(seed=cv_seed)  # Apply the same seed range rules as the outer split.
 
     folds = []
+    residual_points = []
     splitter = RepeatedKFold(
         n_splits=int(n_splits), n_repeats=int(n_repeats), random_state=int(cv_seed)
     )
@@ -77,12 +78,26 @@ def evaluate_training_folds(
             validation_rows[FEATURES], validation_rows[TARGET]
         )
 
-        def scores(model) -> dict:
-            prediction = model.fit(x_fit, y_fit).predict(x_validation)
+        linear_prediction = LinearRegression().fit(x_fit, y_fit).predict(x_validation)
+        mean_prediction = DummyRegressor(strategy="mean").fit(x_fit, y_fit).predict(x_validation)
+
+        def scores(prediction) -> dict:
             return {
                 "mae": float(mean_absolute_error(y_validation, prediction)),
                 "rmse": float(mean_squared_error(y_validation, prediction) ** 0.5),
             }
+
+        if index < n_splits:
+            residual_points.extend(
+                {
+                    "row_position": int(position),
+                    "predicted_grade": float(predicted),
+                    "residual_grade_points": float(actual - predicted),
+                }
+                for position, actual, predicted in zip(
+                    validation_positions, y_validation, linear_prediction
+                )
+            )
 
         fold = {
             "repeat": index // n_splits + 1,
@@ -90,8 +105,8 @@ def evaluate_training_folds(
             "training_count": len(fit_positions),
             "validation_count": len(validation_positions),
             "validation_positions": validation_positions,
-            "linear_regression": scores(LinearRegression()),
-            "mean_baseline": scores(DummyRegressor(strategy="mean")),
+            "linear_regression": scores(linear_prediction),
+            "mean_baseline": scores(mean_prediction),
         }
         folds.append(fold)
 
@@ -110,6 +125,15 @@ def evaluate_training_folds(
         "target": TARGET,
         "folds": folds,
         "score_summary": summarize_fold_scores(folds),
+        "residual_diagnostics": {
+            "method": "First five-fold repeat on outer training rows only",
+            "model": "linear_regression",
+            "row_count": len(residual_points),
+            "x_label": "Predicted final grade (grade points)",
+            "y_label": "Actual minus predicted (grade points)",
+            "zero_reference": 0.0,
+            "points": sorted(residual_points, key=lambda point: point["row_position"]),
+        },
         "limitations": [
             "Validation uses historical training rows only; the reserved holdout is excluded.",
             "Fold scores are exploratory and do not establish performance for new populations.",
