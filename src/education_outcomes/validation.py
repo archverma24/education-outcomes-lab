@@ -17,7 +17,7 @@ def summarize_fold_scores(folds: list[dict]) -> dict:
     if len(folds) < 2:
         raise ValueError("At least two fold scores are required for a spread summary.")
     models = {}
-    for model in ("linear_regression", "mean_baseline"):
+    for model in ("linear_regression", "mean_baseline", "g2_copy"):
         metrics = {}
         for metric in ("mae", "rmse"):
             values = [fold[model][metric] for fold in folds]
@@ -80,6 +80,7 @@ def evaluate_training_folds(
 
         linear_prediction = LinearRegression().fit(x_fit, y_fit).predict(x_validation)
         mean_prediction = DummyRegressor(strategy="mean").fit(x_fit, y_fit).predict(x_validation)
+        g2_prediction = x_validation["G2"].to_numpy()
 
         def scores(prediction) -> dict:
             return {
@@ -107,6 +108,7 @@ def evaluate_training_folds(
             "validation_positions": validation_positions,
             "linear_regression": scores(linear_prediction),
             "mean_baseline": scores(mean_prediction),
+            "g2_copy": scores(g2_prediction),
         }
         folds.append(fold)
 
@@ -122,6 +124,9 @@ def evaluate_training_folds(
         "outer_training_count": len(outer_train_positions),
         "reserved_holdout_count": len(holdout_positions),
         "features": FEATURES.copy(),
+        "benchmark_definitions": {
+            "g2_copy": "Predict final grade by copying the second-period grade; no fitted parameters",
+        },
         "target": TARGET,
         "folds": folds,
         "score_summary": summarize_fold_scores(folds),
