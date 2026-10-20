@@ -41,6 +41,9 @@ class RepeatedValidationTests(unittest.TestCase):
                 self.assertTrue(set(positions) <= set(outer_train))
                 self.assertGreaterEqual(fold["linear_regression"]["mae"], 0)
                 self.assertGreaterEqual(fold["mean_baseline"]["mae"], 0)
+                errors = frame.iloc[positions]["G3"] - frame.iloc[positions]["G2"]
+                self.assertAlmostEqual(fold["g2_copy"]["mae"], errors.abs().mean())
+                self.assertAlmostEqual(fold["g2_copy"]["rmse"], (errors.pow(2).mean()) ** 0.5)
                 seen.extend(positions)
             self.assertEqual(sorted(seen), sorted(outer_train))
 
@@ -85,9 +88,11 @@ class RepeatedValidationTests(unittest.TestCase):
     def test_summary_reports_known_fold_spread_without_interval_claim(self):
         folds = [
             {"linear_regression": {"mae": 1.0, "rmse": 2.0},
-             "mean_baseline": {"mae": 2.0, "rmse": 3.0}},
+             "mean_baseline": {"mae": 2.0, "rmse": 3.0},
+             "g2_copy": {"mae": 1.0, "rmse": 3.0}},
             {"linear_regression": {"mae": 3.0, "rmse": 4.0},
-             "mean_baseline": {"mae": 4.0, "rmse": 5.0}},
+             "mean_baseline": {"mae": 4.0, "rmse": 5.0},
+             "g2_copy": {"mae": 5.0, "rmse": 7.0}},
         ]
         summary = summarize_fold_scores(folds)
         self.assertEqual(summary["fold_count"], 2)
@@ -98,6 +103,7 @@ class RepeatedValidationTests(unittest.TestCase):
         self.assertAlmostEqual(linear_mae["sample_standard_deviation"], sqrt(2))
         self.assertEqual((linear_mae["minimum"], linear_mae["maximum"]), (1.0, 3.0))
         self.assertEqual(summary["models"]["mean_baseline"]["rmse"]["mean"], 4.0)
+        self.assertEqual(summary["models"]["g2_copy"]["mae"]["mean"], 3.0)
         with self.assertRaisesRegex(ValueError, "At least two"):
             summarize_fold_scores(folds[:1])
 

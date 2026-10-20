@@ -57,7 +57,7 @@ jobs:
           assert "not a confidence interval" in summary["interpretation"]
           import math
           from statistics import fmean, stdev
-          for model in ("linear_regression", "mean_baseline"):
+          for model in ("linear_regression", "mean_baseline", "g2_copy"):
               for metric in ("mae", "rmse"):
                   values = [fold[model][metric] for fold in cross_validation["folds"]]
                   measured = summary["models"][model][metric]
@@ -72,7 +72,7 @@ jobs:
                   assert fold["training_count"] + fold["validation_count"] == 519
                   assert fold["validation_count"] == len(positions)
                   assert not set(positions) & set(test_positions)
-                  for model in ("linear_regression", "mean_baseline"):
+                  for model in ("linear_regression", "mean_baseline", "g2_copy"):
                       assert math.isfinite(fold[model]["mae"])
                       assert math.isfinite(fold[model]["rmse"])
                   seen.extend(positions)
@@ -85,6 +85,12 @@ jobs:
           assert [point["row_position"] for point in points] == sorted(train_positions)
           assert not {point["row_position"] for point in points} & set(test_positions)
           source_for_residuals = pd.read_csv("data/raw/student-por.csv", sep=";")
+          assert "copying the second-period grade" in cross_validation["benchmark_definitions"]["g2_copy"]
+          for fold in cross_validation["folds"]:
+              selected = source_for_residuals.iloc[fold["validation_positions"]]
+              errors = selected["G3"] - selected["G2"]
+              assert math.isclose(fold["g2_copy"]["mae"], errors.abs().mean())
+              assert math.isclose(fold["g2_copy"]["rmse"], (errors.pow(2).mean()) ** 0.5)
           for point in points:
               actual = source_for_residuals.iloc[point["row_position"]]["G3"]
               assert math.isclose(point["residual_grade_points"], actual - point["predicted_grade"], abs_tol=1e-12)
