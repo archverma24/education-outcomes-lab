@@ -37,7 +37,7 @@ For a checksum obtained from a trusted source, add `--expected-sha256 YOUR_64_CH
 - MAE/RMSE, model coefficients, source URL and source-file SHA-256 in the CLI report.
 - Fixed-seed repeated five-fold validation on outer training rows only, with per-fold scores for linear regression, the training-mean baseline, and a G2-copy benchmark, plus counts, descriptive score variation, and out-of-fold residuals in a separate report.
 - Versioned data provenance manifest with attribution, UTC retrieval time, and a hash tied to the downloaded file.
-- Streamlit dashboard with a live data-quality panel, missing-value counts, school-filtered grade chart, school-level summaries, a descriptive outlier chart, and CSV export with sample sizes, model metrics, coefficients and report export.
+- Streamlit dashboard with a live data-quality panel, missing-value counts, school-filtered grade chart, school-level summaries, a descriptive outlier chart, CSV export, and separately labeled training-validation and historical holdout comparison tables.
 - Pipeline unit tests and a GitHub Actions workflow.
 
 The split manifest lists zero-based CSV row positions for each partition, the source-file SHA-256, seed, fraction, and counts. Positions are not student IDs; they only make sense for the exact file hash recorded in the manifest. The manifest contains no student records. Use `--split-output` to choose another path.
@@ -45,6 +45,8 @@ The split manifest lists zero-based CSV row positions for each partition, the so
 The cross-validation report records 3 repeats of 5 folds, with training/validation counts and MAE/RMSE for linear regression and a fold-training mean baseline. It lists validation row positions so the exclusion of the reserved holdout can be checked. Use `--cross-validation-output` to choose another path. The report also gives each model's mean fold score, sample standard deviation, minimum, and maximum in grade points. These summarize variation across repeated folds that share records; they are not a confidence interval or a claim about a new population.
 
 The G2-copy benchmark predicts each validation record's final grade by using that record's second-period grade unchanged. It has no fitted parameters and uses the same validation rows and MAE/RMSE calculations as the other benchmarks. Its scores belong to the training-only cross-validation report, not the historical holdout report.
+
+The dashboard compares the training-mean, G2-copy, and linear benchmarks on the same 15 training-only folds, with mean MAE, MAE fold spread, and mean RMSE. A separate table shows only the two historical holdout scores already measured on Day 1. The tables check that their reports use the same outer split. They do not use the holdout to choose a model.
 
 The dashboard shows a training-only residual plot: predicted final grade on the horizontal axis and actual minus predicted grade on the vertical axis, with a zero reference line. Every outer-training row appears once from the first validation repeat; reserved test rows never appear. These historical errors are descriptive and do not support individual decisions.
 

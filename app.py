@@ -7,6 +7,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from education_outcomes.comparison import comparison_tables
 from education_outcomes.data import schema_validation_report
 from education_outcomes.exploration import (
     grade_distribution,
@@ -99,8 +100,8 @@ except (OSError, ValueError) as error:
     st.stop()
 a, b, c = st.columns(3)
 a.metric("Course records", report["rows"])
-b.metric("Model MAE (grade points)", f'{report["linear_regression"]["mae"]:.2f}')
-c.metric("Mean baseline MAE", f'{report["mean_baseline"]["mae"]:.2f}')
+b.metric("Historical holdout model MAE (grade points)", f'{report["linear_regression"]["mae"]:.2f}')
+c.metric("Historical holdout mean MAE (grade points)", f'{report["mean_baseline"]["mae"]:.2f}')
 st.subheader("Final-grade distribution")
 school_options = sorted(data["school"].dropna().unique()) if "school" in data else []
 if school_options:
@@ -121,7 +122,7 @@ st.bar_chart(
 st.caption(
     "Each bar counts course records with one final grade. "
     f"The chart shows {distribution['row_count']} of {report['rows']} course records. "
-    "Model scores above use the full dataset and do not change with this chart filter."
+    "Historical holdout scores above use the full dataset split and do not change with this chart filter."
 )
 st.subheader("School-level grade summaries")
 if school_options:
@@ -161,12 +162,29 @@ st.caption(
     "These are descriptive flags, not data errors or reasons to remove records. "
     "The chart does not change model training or scores."
 )
-st.subheader("Training-only residual diagnostics")
 try:
     training_validation = evaluate_training_dataset(data)
-except (OSError, ValueError) as error:
-    st.error(f"Cannot compute training residuals: {error}")
+    validation_table, holdout_table = comparison_tables(training_validation, report)
+except (OSError, ValueError, KeyError) as error:
+    st.error(f"Cannot compare model results: {error}")
     st.stop()
+
+st.subheader("Training-validation comparison")
+st.dataframe(validation_table, hide_index=True)
+st.caption(
+    f"All three benchmarks use the same {training_validation['score_summary']['fold_count']} "
+    f"repeated folds within {training_validation['outer_training_count']} outer-training "
+    "course records. Lower MAE and RMSE mean smaller errors. Fold spread is descriptive, "
+    "not a confidence interval."
+)
+st.subheader("Historical holdout results")
+st.dataframe(holdout_table, hide_index=True)
+st.caption(
+    f"These scores come from the separate {training_validation['reserved_holdout_count']}-record "
+    "historical holdout already viewed on Day 1. No G2-copy holdout score is reported. "
+    "This is not untouched external validation, and these scores should not select a model."
+)
+st.subheader("Training-only residual diagnostics")
 diagnostics = training_validation["residual_diagnostics"]
 residual_frame = pd.DataFrame(diagnostics["points"])
 st.metric("Training residual points", diagnostics["row_count"])

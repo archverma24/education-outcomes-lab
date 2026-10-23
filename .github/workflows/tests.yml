@@ -123,7 +123,40 @@ jobs:
           assert "Training-only residual diagnostics" in [
               heading.value for heading in dashboard.subheader
           ]
-          full_model_mae = metrics["Model MAE (grade points)"]
+          full_model_mae = metrics["Historical holdout model MAE (grade points)"]
+          assert "Training-validation comparison" in [
+              heading.value for heading in dashboard.subheader
+          ]
+          assert "Historical holdout results" in [
+              heading.value for heading in dashboard.subheader
+          ]
+          validation_table = dashboard.dataframe[2].value
+          holdout_table = dashboard.dataframe[3].value
+          assert list(validation_table["Model"]) == [
+              "Mean baseline", "Copy second-period grade", "Linear regression"
+          ]
+          assert list(validation_table["Folds"]) == [15, 15, 15]
+          assert list(holdout_table["Model"]) == [
+              "Mean baseline", "Linear regression"
+          ]
+          assert list(holdout_table["Holdout records"]) == [130, 130]
+          for label, key in (
+              ("Mean baseline", "mean_baseline"),
+              ("Copy second-period grade", "g2_copy"),
+              ("Linear regression", "linear_regression"),
+          ):
+              row = validation_table.set_index("Model").loc[label]
+              values = summary["models"][key]
+              assert math.isclose(row["Mean MAE (grade points)"], values["mae"]["mean"])
+              assert math.isclose(
+                  row["MAE fold SD (grade points)"],
+                  values["mae"]["sample_standard_deviation"],
+              )
+              assert math.isclose(row["Mean RMSE (grade points)"], values["rmse"]["mean"])
+          assert math.isclose(
+              holdout_table.set_index("Model").loc["Linear regression", "MAE (grade points)"],
+              report["linear_regression"]["mae"],
+          )
           source = pd.read_csv("data/raw/student-por.csv", sep=";")
           assert "School-level grade summaries" in [
               heading.value for heading in dashboard.subheader
@@ -163,7 +196,7 @@ jobs:
           filtered = {metric.label: metric.value for metric in dashboard.metric}
           assert int(filtered["Records in chart"]) == int((source["school"] == "GP").sum())
           assert int(filtered["Course records"]) == profile["row_count"]
-          assert filtered["Model MAE (grade points)"] == full_model_mae
+          assert filtered["Historical holdout model MAE (grade points)"] == full_model_mae
           assert int(filtered["Missing cells"]) == 0
           filtered_school_table = dashboard.dataframe[1].value
           pd.testing.assert_frame_equal(filtered_school_table, school_table)
@@ -194,7 +227,7 @@ jobs:
               assert int(missing_table.loc["G1", "Missing records"]) == 1
               assert int(missing_table.loc["G2", "Missing records"]) == 1
               assert int(missing_table["Missing records"].sum()) == 2
-              assert "Model MAE (grade points)" not in invalid_metrics
+              assert "Historical holdout model MAE (grade points)" not in invalid_metrics
               assert any("G1" in error.value for error in invalid_dashboard.error)
               assert any("G2" in error.value for error in invalid_dashboard.error)
           finally:
