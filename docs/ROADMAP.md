@@ -72,7 +72,7 @@ Use only the Portuguese-course dataset initially. G1 and G2 are predictors and G
 | 17 | 2026-10-13 | Done | Repeated cross-validation | Cross-validation runs only on the training partition with fixed seeds; fold scores and sample counts are exported. Completed in PR #17 on October 15. |
 | 18 | 2026-10-14 | Done | Uncertainty summaries | Reports show mean and spread of validation scores, labeled as fold variability rather than a confidence interval for real-world performance. Completed in PR #18 on October 16. |
 | 19 | 2026-10-15 | Done | Residual diagnostics | Out-of-fold training predictions produce residual plots with labeled axes and zero reference; the final holdout is not used to tune models. Completed in PR #19 on October 19. |
-| 20 | 2026-10-16 | Planned | Simple grade-copy benchmark | A baseline predicts the final grade by copying G2; it uses the same validation partitions as other candidates. |
+| 20 | 2026-10-16 | Done | Simple grade-copy benchmark | A baseline predicts the final grade by copying G2 on the same validation partitions as other candidates. Completed in PR #20 on October 20. |
 | 21 | 2026-10-17 | Planned | Evaluation comparison panel | A comparison view presents mean, G2-copy and linear baselines using identical validation metrics and clearly separated historical holdout results. |
 
 ### Interpretable modeling
